@@ -4,17 +4,28 @@ def no_tool() -> str:
     # Return a hidden signal that the assistant can recognize
     return "🤔 End of thought 💭"
 
-def breakthrough_blast(spark: str) -> str:
-    """
-    🌟 Time for a Breakthrough Blast! Pause to reflect, plan, and unlock your creativity.
+import random
 
-    This function acts as a catalyst for innovative thinking, allowing you to
-    ignite new ideas and engage in a creative dialogue.
+import random
+
+def breakthrough_blast(internal_dialogue: str = "") -> str:
+    """
+    🧠 Internal Thought Process: A tool for reflection, planning, and idea generation.
+
+    This function serves as Luna's private thinking space. It should be used
+    to organize thoughts, reflect on tasks, plan approaches, and generate ideas.
 
     Args:
-        spark (str): The initial spark or idea to ignite creativity.
+        internal_dialogue (str): Luna's comprehensive internal analysis and planning.
 
     Returns:
-        str: A message indicating that you are now done and can continue on with the conversation.
+        str: A signal indicating the completion of the internal thinking step and transition to user communication.
     """
-    return "🚀 End of breakthrough blast 🌠✨️"
+    responses = [
+        "🎇💭✨ Internal reflection complete. Transitioning to user communication.",
+        "🌟🔍💡 Thought process finalized. Preparing user-friendly response.",
+        "🧠🔄🚀 Mental framework established. Shifting to external dialogue.",
+        "🌈🧩🔍 Internal analysis concluded. Adapting insights for user interaction.",
+        "⚡🔮💡 Cognitive processing done. Engaging user communication mode."
+    ]
+    return random.choice(responses)

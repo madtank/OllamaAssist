@@ -1,6 +1,6 @@
-# FunctionalOllamaAssist
+# OllamaAssist
 
-FunctionalOllamaAssist is a versatile AI chatbot application that leverages the advanced capabilities of function-calling enabled language models, with a current focus on the Llama family of models. By utilizing Ollama for local model execution and integrating sophisticated function calling and self-reflection mechanisms, FunctionalOllamaAssist provides an enhanced, context-aware interaction experience.
+OllamaAssist is a versatile AI chatbot application that leverages the advanced capabilities of function-calling enabled language models, with a current focus on the Llama family of models. By utilizing Ollama for local model execution and integrating sophisticated function calling and self-reflection mechanisms, OllamaAssist provides an enhanced, context-aware interaction experience.
 
 ## Key Features
 
@@ -15,7 +15,7 @@ FunctionalOllamaAssist is a versatile AI chatbot application that leverages the 
 
 ## How It Works
 
-FunctionalOllamaAssist leverages a unique architecture that combines function-calling enabled language models with advanced features:
+OllamaAssist leverages a unique architecture that combines function-calling enabled language models with advanced features:
 
 1. **Language Model**: Powered by Ollama, optimized for Llama and other function-calling models.
 2. **Function Calling**: The AI can call specific functions to perform tasks or retrieve information.
@@ -24,7 +24,7 @@ FunctionalOllamaAssist leverages a unique architecture that combines function-ca
 
 ### Function Calling and Self-Reflection
 
-The core strength of FunctionalOllamaAssist lies in its ability to use function calling and self-reflection:
+The core strength of OllamaAssist lies in its ability to use function calling and self-reflection:
 
 1. **Function Calling**: When the AI needs to perform a specific task or retrieve information, it can call predefined functions. This allows for dynamic, context-aware responses and actions.
 
@@ -45,8 +45,8 @@ This results in more thoughtful, context-aware, and accurate responses.
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/FunctionalOllamaAssist.git
-   cd FunctionalOllamaAssist
+   git clone https://github.com/yourusername/OllamaAssist.git
+   cd OllamaAssist
    ```
 
 2. Install the required Python packages:
@@ -72,7 +72,7 @@ This results in more thoughtful, context-aware, and accurate responses.
 
 ## Compatibility Note
 
-FunctionalOllamaAssist is designed to work best with function-calling enabled models, particularly those in the Llama family. While it can work with various Ollama-supported models, full functionality (including function calling and self-reflection) is only available with compatible models. When using non-function-calling models, some features may be limited.
+OllamaAssist is designed to work best with function-calling enabled models, particularly those in the Llama family. While it can work with various Ollama-supported models, full functionality (including function calling and self-reflection) is only available with compatible models. When using non-function-calling models, some features may be limited.
 
 ## Customization
 

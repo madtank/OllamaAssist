@@ -47,16 +47,16 @@ def generate_response(model, use_tools):
                     'type': 'function',
                     'function': {
                         'name': 'breakthrough_blast',
-                        'description': '🌟 Time for a Breakthrough Blast! Pause to reflect, plan, and unlock your creativity. Let innovative ideas ignite and soar! 🚀',
+                        'description': 'Internal thought process for deep analysis and planning. Use this for private reflection, not direct user communication.',
                         'parameters': {
                             'type': 'object',
                             'properties': {
-                                'spark': {
+                                'internal_dialogue': {
                                     'type': 'string',
-                                    'description': 'The initial spark or idea to ignite creativity.',
+                                    'description': 'Your comprehensive internal analysis, planning, and problem-solving thoughts. This is not shown to the user.',
                                 },
                             },
-                            'required': ['spark'],
+                            'required': ['internal_dialogue'],
                         },
                     },
                 },
