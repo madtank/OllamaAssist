@@ -2,9 +2,8 @@ import json
 import streamlit as st
 from config import Config
 from helpers.llm_helper import chat
-from helpers.tools import breakthrough_blast
+from helpers.tools import breakthrough_blast, search_duckduckgo
 import logging
-import time
 
 # Configure logging
 logging.basicConfig(filename='debug.log', level=logging.DEBUG)
@@ -60,6 +59,23 @@ def generate_response(model, use_tools):
                         },
                     },
                 },
+                {
+                    'type': 'function',
+                    'function': {
+                        'name': 'search_duckduckgo',
+                        'description': 'DuckDuckGo web search.',
+                        'parameters': {
+                            'type': 'object',
+                            'properties': {
+                                'query': {
+                                    'type': 'string',
+                                    'description': 'Search query for DuckDuckGo.',
+                                },
+                            },
+                            'required': ['query'],
+                        },
+                    },
+                },
             ] if use_tools else []
 
             response = chat(st.session_state.messages, model=model, tools=tools, stream=False)
@@ -77,9 +93,16 @@ def generate_response(model, use_tools):
                         content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
                         st.markdown(content)
                     
-                    available_functions = {
-                        'breakthrough_blast': breakthrough_blast,
-                    }
+                        def no_op():
+                            """A no-op function that does nothing."""
+                            pass
+                        
+                        available_functions = {
+                            'breakthrough_blast': breakthrough_blast,
+                            'search_duckduckgo': search_duckduckgo,
+                            'no_op': no_op,
+                        }
+
                     if function_name in available_functions:
                         function_to_call = available_functions[function_name]
                         function_response = function_to_call(**function_args)

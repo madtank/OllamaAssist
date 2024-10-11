@@ -1,2 +1,4 @@
 ollama
 streamlit
+duckduckgo_search
+requests
