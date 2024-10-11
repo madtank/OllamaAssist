@@ -12,6 +12,7 @@ OllamaAssist is a versatile AI chatbot application that leverages the advanced c
 - **Local Execution**: Run models on your local machine for enhanced privacy and control.
 - **Model Selection**: Choose from compatible Ollama models at runtime.
 - **Streaming Responses**: Get real-time responses as the model generates them.
+- **Spark Integration**: Leverage Apache Spark for distributed data processing and analysis.
 
 ## How It Works
 
@@ -21,6 +22,7 @@ OllamaAssist leverages a unique architecture that combines function-calling enab
 2. **Function Calling**: The AI can call specific functions to perform tasks or retrieve information.
 3. **Self-Reflection**: A special tool that allows the AI to analyze and refine its own thoughts and responses.
 4. **Streamlit Frontend**: Provides an intuitive interface for user interactions.
+5. **Spark Integration**: Utilize Apache Spark for scalable data processing and analysis.
 
 ### Function Calling and Self-Reflection
 
@@ -35,17 +37,25 @@ The core strength of OllamaAssist lies in its ability to use function calling an
 
 This results in more thoughtful, context-aware, and accurate responses.
 
+### Spark Integration
+
+OllamaAssist now includes integration with Apache Spark, enabling the AI to perform distributed data processing and analysis. This is particularly useful for handling large datasets and performing complex computations efficiently.
+
+1. **Spark Setup**: Ensure Apache Spark is installed and configured on your system.
+2. **Spark Functions**: The AI can call Spark functions to process and analyze data. For example, the `spark_data_analysis` function can be used to perform data analysis tasks using Spark.
+
 ## Prerequisites
 
 - Python 3.9+
-- Ollama installed on your system (see [Ollama installation guide](https://github.com/jmorganca/ollama#installation))
+- Ollama installed on your system
 - A function-calling enabled model installed via Ollama (e.g., Llama 3.2 or later versions)
+- Apache Spark installed and configured on your system
 
 ## Installation
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/OllamaAssist.git
+   git clone https://github.com/madtank/OllamaAssist.git
    cd OllamaAssist
    ```
 
