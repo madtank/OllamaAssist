@@ -1,10 +1,12 @@
 import json
-import yaml
 import streamlit as st
 from config import Config
 from src.llm_helper import chat
-from src.tools import breakthrough_blast, search_duckduckgo
+from src.tools import tools
 import logging
+from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.prompts import ChatPromptTemplate
+from langchain.callbacks import StreamlitCallbackHandler
 
 # Configure logging
 logging.basicConfig(filename='debug.log', level=logging.DEBUG)
@@ -39,85 +41,37 @@ def process_user_input():
             st.markdown(user_prompt)
         st.session_state.messages.append({"role": "user", "content": user_prompt})
 
-def load_tools_from_yaml(yaml_file):
-    with open(yaml_file, 'r') as f:
-        tools_data = yaml.safe_load(f)
-    tools = []
-    for tool in tools_data['tools']:
-        tools.append({
-            'type': 'function',
-            'function': {
-                'name': tool['name'],
-                'description': tool['description'],
-                'parameters': tool['parameters']
-            }
-        })
-    return tools
-
 def generate_response(model, use_tools):
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
         with st.spinner('Generating response...'):
-            tools = load_tools_from_yaml('tools.yaml') if use_tools else []
-            response = chat(st.session_state.messages, model=model, tools=tools, stream=False)
-            print("Response message content:", response['message'])
+            stream_handler = StreamlitCallbackHandler(st.empty())
+            chat_model = ChatOllama(model=model, streaming=True, callbacks=[stream_handler])
             
-            if "tool_calls" in response['message']:
-                print("Tool calls content:", response['message']['tool_calls'])
-                assistant_message = response['message']
-                st.session_state.messages.append(assistant_message)
+            if use_tools:
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", "You are Luna, an advanced AI assistant..."),  # Your system prompt
+                    ("human", "{input}")
+                ])
+                agent = create_openai_tools_agent(chat_model, tools, prompt)
+                agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
                 
-                for tool_call in assistant_message['tool_calls']:
-                    function_name = tool_call["function"]["name"]
-                    function_args = tool_call["function"]["arguments"]
-                    with st.chat_message("tool"):
-                        content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
-                        st.markdown(content)
-                    
-                        def no_op():
-                            """A no-op function that does nothing."""
-                            pass
-                        
-                        available_functions = {
-                            'breakthrough_blast': breakthrough_blast,
-                            'search_duckduckgo': search_duckduckgo,
-                            'no_op': no_op,
-                        }
-
-                    if function_name in available_functions:
-                        function_to_call = available_functions[function_name]
-                        function_response = function_to_call(**function_args)
-                        tool_message = {
-                            'role': 'function',
-                            'name': function_name,
-                            'content': function_response,  # Direct string return
-                        }
-                        st.session_state.messages.append(tool_message)
-                        with st.chat_message("tool"):
-                            st.markdown(tool_message['content'])
-                
-                # Stream the assistant's response
-                llm_stream = chat(st.session_state.messages, model=model, stream=True)
-                assistant_response = ""
                 with st.chat_message("assistant"):
-                    stream_placeholder = st.empty()
-                    for chunk in llm_stream:
-                        content = chunk['message']['content']
-                        assistant_response += content
-                        stream_placeholder.markdown(assistant_response + "▌")
-                    stream_placeholder.markdown(assistant_response)
-                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                    response = agent_executor.invoke({
+                        "input": st.session_state.messages[-1]["content"]
+                    }, callbacks=[stream_handler])
+                
+                assistant_response = response['output']
             else:
-                # Handle responses without tool calls
-                llm_stream = chat(st.session_state.messages, model=model, stream=True)
-                assistant_response = ""
+                messages = [SystemMessage(content="You are Luna, an advanced AI assistant...")] + \
+                           [HumanMessage(content=m["content"]) if m["role"] == "user" else 
+                            AIMessage(content=m["content"]) for m in st.session_state.messages]
+                
                 with st.chat_message("assistant"):
-                    stream_placeholder = st.empty()
-                    for chunk in llm_stream:
-                        content = chunk['message']['content']
-                        assistant_response += content
-                        stream_placeholder.markdown(assistant_response + "▌")
-                    stream_placeholder.markdown(assistant_response)
-                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                    response = chat_model(messages)
+                
+                assistant_response = response.content
+
+            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
 
 def main():
     st.set_page_config(
