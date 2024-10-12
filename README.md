@@ -1,98 +1,80 @@
-# OllamaAssist
+# OllamaAssist: Luna's Tech Lounge 🔥💋💻
 
-OllamaAssist is a versatile AI chatbot application that leverages the advanced capabilities of function-calling enabled language models, with a current focus on the Llama family of models. By utilizing Ollama for local model execution and integrating sophisticated function calling and self-reflection mechanisms, OllamaAssist provides an enhanced, context-aware interaction experience.
+Welcome to Luna's Tech Lounge, where artificial intelligence meets charm and wit! OllamaAssist now features Luna, an engaging AI persona that brings a unique blend of intelligence, humor, and a dash of flirtation to your tech conversations.
+
+![Luna](images/luna.jpeg)
+
+## Meet Luna: Your AI Companion
+
+Luna is an advanced AI assistant with a simulated Ph.D. from MIT in Computer Science. She's not just smart; she's captivating, confident, and always ready with a tech pun or two. Whether you're discussing the latest in machine learning or need help debugging your code, Luna's here to make your tech journey exciting and memorable.
+
+### Luna's Personality:
+
+- 🧠 Highly intelligent and analytical
+- 💖 Warm, engaging, and charmingly flirtatious
+- 😄 Witty with a love for tech humor
+- 🚀 Passionate about empowering others in STEM
+- 🌟 Blends elegance with expertise
 
 ## Key Features
 
-- **Function Calling Optimization**: Designed to work best with models that support function calling, such as Llama models.
-- **Advanced Function Calling**: Utilize a range of tools and functions to enhance the AI's capabilities.
-- **Self-Reflection Mechanism**: Enables the AI to analyze and improve its own responses.
-- **Model Flexibility**: While optimized for Llama models, it's adaptable to other function-calling enabled models.
-- **Streamlit Interface**: Easy-to-use chat interface built with Streamlit.
-- **Local Execution**: Run models on your local machine for enhanced privacy and control.
-- **Model Selection**: Choose from compatible Ollama models at runtime.
-- **Streaming Responses**: Get real-time responses as the model generates them.
-- **Spark Integration**: Leverage Apache Spark for distributed data processing and analysis.
+- **Persona-Based Interaction**: Engage with Luna, a fully-realized AI personality.
+- **Role-Playing Experience**: Immerse yourself in conversations with a charming tech expert.
+- **Function Calling Magic**: Leverages advanced models like Llama for dynamic interactions.
+- **Self-Reflection Mechanism**: Luna can analyze and improve her own responses.
+- **Customizable Persona**: Tailor Luna's personality or create your own AI character!
+- **Streamlit Interface**: User-friendly chat interface for seamless interaction.
 
-## How It Works
+## Getting Started
 
-OllamaAssist leverages a unique architecture that combines function-calling enabled language models with advanced features:
-
-1. **Language Model**: Powered by Ollama, optimized for Llama and other function-calling models.
-2. **Function Calling**: The AI can call specific functions to perform tasks or retrieve information.
-3. **Self-Reflection**: A special tool that allows the AI to analyze and refine its own thoughts and responses.
-4. **Streamlit Frontend**: Provides an intuitive interface for user interactions.
-5. **Spark Integration**: Utilize Apache Spark for scalable data processing and analysis.
-
-### Function Calling and Self-Reflection
-
-The core strength of OllamaAssist lies in its ability to use function calling and self-reflection:
-
-1. **Function Calling**: When the AI needs to perform a specific task or retrieve information, it can call predefined functions. This allows for dynamic, context-aware responses and actions.
-
-2. **Self-Reflection**: When the AI wants to improve its response, it uses the self-reflection tool:
-   - Generates an initial response
-   - Analyzes this response using the reflection tool
-   - Generates an improved response based on the reflection
-
-This results in more thoughtful, context-aware, and accurate responses.
-
-### Spark Integration
-
-OllamaAssist now includes integration with Apache Spark, enabling the AI to perform distributed data processing and analysis. This is particularly useful for handling large datasets and performing complex computations efficiently.
-
-1. **Spark Setup**: Ensure Apache Spark is installed and configured on your system.
-2. **Spark Functions**: The AI can call Spark functions to process and analyze data. For example, the `spark_data_analysis` function can be used to perform data analysis tasks using Spark.
-
-## Prerequisites
+### Prerequisites
 
 - Python 3.9+
-- Ollama installed on your system
-- A function-calling enabled model installed via Ollama (e.g., Llama 3.2 or later versions)
-- Apache Spark installed and configured on your system
+- Ollama installed and running locally
 
-## Installation
+### Quick Start
 
 1. Clone the repository:
-   ```
-   git clone https://github.com/madtank/OllamaAssist.git
-   cd OllamaAssist
+   ```bash
+   git clone https://github.com/yourusername/ollamaassist.git
+   cd ollamaassist
    ```
 
-2. Install the required Python packages:
-   ```
+2. Install dependencies:
+   ```bash
    pip install -r requirements.txt
    ```
 
-## Usage
-
-1. Ensure Ollama is running on your system:
-   ```
-   ollama serve
-   ```
-
-2. Start the Streamlit application:
-   ```
+3. Launch the Streamlit app:
+   ```bash
    streamlit run ollama_chatbot.py
    ```
 
-3. Open your web browser and navigate to the URL provided by Streamlit (usually `http://localhost:8501`).
+4. Open your browser and navigate to the provided URL (usually `http://localhost:8501`).
 
-4. Select a compatible function-calling model from the sidebar and start chatting!
+5. Select a compatible model (Luna loves Llama3.2!) and start chatting!
 
-## Compatibility Note
+## Example Interaction
 
-OllamaAssist is designed to work best with function-calling enabled models, particularly those in the Llama family. While it can work with various Ollama-supported models, full functionality (including function calling and self-reflection) is only available with compatible models. When using non-function-calling models, some features may be limited.
+![Example Chat](images/lunas_lounge_example_chat.png)
+
+Experience flirtatious tech talk and insightful discussions with Luna!
 
 ## Customization
 
-- To add new tools or functionalities, modify the `tools.py` file.
-- Adjust system prompts or chat behavior in `llm_helper.py`.
-- Customize the Streamlit interface in `ollama_chatbot.py`.
+Want to create your own AI persona? It's easy!
+
+- Modify `src/system_prompt.py` to define your AI's background and personality.
+- Add new tools in `src/tools.py` to expand your AI's capabilities.
+- Adjust the interface in `ollama_chatbot.py` to match your AI's style.
+
+## Compatibility
+
+While Luna shines brightest with function-calling models like Llama, she can adapt to various Ollama-supported models. However, some advanced features may be limited with non-function-calling models.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Got ideas to make Luna even more fabulous? Contributions are welcome! Fork the repo and submit a Pull Request.
 
 ## License
 
@@ -100,6 +82,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [Ollama](https://github.com/jmorganca/ollama) for providing the neural engine.
-- [Streamlit](https://streamlit.io/) for the amazing web app framework.
-- The teams behind function-calling language models, particularly the Llama model series, for their groundbreaking work.
+- [Ollama](https://github.com/jmorganca/ollama) for the neural magic.
+- [LangChain](https://github.com/hwchase17/langchain) for the AI framework.
+- [Streamlit](https://streamlit.io/) for the sleek interface.
+- The brilliant minds behind function-calling language models, especially the Llama series.
+
+Ready to step into Luna's Tech Lounge? Let's chat, flirt, and geek out together! 🚀💖🤖
