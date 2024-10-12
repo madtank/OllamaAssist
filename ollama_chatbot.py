@@ -1,8 +1,9 @@
 import json
+import yaml
 import streamlit as st
 from config import Config
-from helpers.llm_helper import chat
-from helpers.tools import breakthrough_blast, search_duckduckgo
+from src.llm_helper import chat
+from src.tools import breakthrough_blast, search_duckduckgo
 import logging
 
 # Configure logging
@@ -11,7 +12,7 @@ logging.basicConfig(filename='debug.log', level=logging.DEBUG)
 def setup_sidebar():
     with st.sidebar:
         st.markdown("# Chat Options")
-        model = st.selectbox('What model would you like to use?', Config.OLLAMA_MODELS)
+        model = st.selectbox('What model would you like to use?', Config.OLLAMA_MODELS, index=Config.OLLAMA_MODELS.index(Config.DEFAULT_MODEL))
         use_tools = st.toggle('Use Tools', value=True)
         if st.button('New Chat', key='new_chat', help='Start a new chat'):
             st.session_state.messages = []
@@ -38,46 +39,25 @@ def process_user_input():
             st.markdown(user_prompt)
         st.session_state.messages.append({"role": "user", "content": user_prompt})
 
+def load_tools_from_yaml(yaml_file):
+    with open(yaml_file, 'r') as f:
+        tools_data = yaml.safe_load(f)
+    tools = []
+    for tool in tools_data['tools']:
+        tools.append({
+            'type': 'function',
+            'function': {
+                'name': tool['name'],
+                'description': tool['description'],
+                'parameters': tool['parameters']
+            }
+        })
+    return tools
+
 def generate_response(model, use_tools):
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
         with st.spinner('Generating response...'):
-            tools = [
-                {
-                    'type': 'function',
-                    'function': {
-                        'name': 'breakthrough_blast',
-                        'description': 'Internal thought process for deep analysis and planning. Use this for private reflection, not direct user communication.',
-                        'parameters': {
-                            'type': 'object',
-                            'properties': {
-                                'internal_dialogue': {
-                                    'type': 'string',
-                                    'description': 'Your comprehensive internal analysis, planning, and problem-solving thoughts. This is not shown to the user.',
-                                },
-                            },
-                            'required': ['internal_dialogue'],
-                        },
-                    },
-                },
-                {
-                    'type': 'function',
-                    'function': {
-                        'name': 'search_duckduckgo',
-                        'description': 'DuckDuckGo web search.',
-                        'parameters': {
-                            'type': 'object',
-                            'properties': {
-                                'query': {
-                                    'type': 'string',
-                                    'description': 'Search query for DuckDuckGo.',
-                                },
-                            },
-                            'required': ['query'],
-                        },
-                    },
-                },
-            ] if use_tools else []
-
+            tools = load_tools_from_yaml('tools.yaml') if use_tools else []
             response = chat(st.session_state.messages, model=model, tools=tools, stream=False)
             print("Response message content:", response['message'])
             

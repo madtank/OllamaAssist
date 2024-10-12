@@ -2,6 +2,7 @@ import ollama
 
 class Config:
     PAGE_TITLE = "Streamlit AI Chatbot with Ollama Integration"
+    DEFAULT_MODEL = "llama3.2:latest"
 
     # Retrieve the list of models using ollama.list()
     models_info = ollama.list()

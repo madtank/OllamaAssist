@@ -1,0 +1,21 @@
+tools:
+  - name: breakthrough_blast
+    description: 'Internal thought process for deep analysis and planning. Use this for private reflection, not direct user communication.'
+    parameters:
+      type: object
+      properties:
+        internal_dialogue:
+          type: string
+          description: 'Your comprehensive internal analysis, planning, and problem-solving thoughts. This is not a message to the user.'
+      required:
+        - internal_dialogue
+  - name: search_duckduckgo
+    description: 'DuckDuckGo web search. You write the query, and we will get the results back directly in our chat.'
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 'Search query for DuckDuckGo.'
+      required:
+        - query
