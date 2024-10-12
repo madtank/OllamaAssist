@@ -8,7 +8,7 @@ import logging
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.prompts import ChatPromptTemplate
-from langchain.callbacks import StreamlitCallbackHandler
+from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 from langchain_community.chat_models import ChatOllama
 
 # Configure logging
@@ -16,8 +16,9 @@ logging.basicConfig(filename='debug.log', level=logging.DEBUG)
 
 def setup_sidebar():
     with st.sidebar:
+        st.image("images/luna.jpeg")
         st.markdown("# Chat Options")
-        model = st.selectbox('What model would you like to use?', Config.OLLAMA_MODELS, index=Config.OLLAMA_MODELS.index(Config.DEFAULT_MODEL))
+        model = st.selectbox('Choose an LLM?', Config.OLLAMA_MODELS, index=Config.OLLAMA_MODELS.index(Config.DEFAULT_MODEL))
         if st.button('New Chat', key='new_chat', help='Start a new chat'):
             st.session_state.messages = []
             st.rerun()
@@ -42,7 +43,7 @@ def display_previous_messages():
             pass
 
 def process_user_input():
-    if user_prompt := st.chat_input("What would you like to ask?"):
+    if user_prompt := st.chat_input("Ask me anything"):
         with st.chat_message("user"):
             st.markdown(user_prompt)
         st.session_state.messages.append({"role": "user", "content": user_prompt})
