@@ -1,5 +1,7 @@
-ollama
+langchain
+langchain-community
+langchain-openai
+langchain-ollama
 streamlit
 duckduckgo_search
 requests
-pyyaml

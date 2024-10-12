@@ -1,10 +1,10 @@
 from langchain.tools import Tool
 from langchain.pydantic_v1 import BaseModel, Field
-from duckduckgo_search import ddg
+from duckduckgo_search import DDGS
 
-def search_duckduckgo(query: str) -> str:
-    results = ddg(query)
-    return results[0]['snippet'] if results else "No results found."
+def search_duckduckgo(query, region='wt-wt', safesearch='off', max_results=5):
+    """DuckDuckGo web search."""
+    return list(DDGS().text(keywords=query, region=region, safesearch=safesearch, max_results=max_results))
 
 def breakthrough_blast(internal_dialogue: str) -> str:
     # Placeholder for the actual implementation of the breakthrough_blast function

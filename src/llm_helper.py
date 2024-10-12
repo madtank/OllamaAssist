@@ -1,5 +1,4 @@
 import json
-import ollama
 from langchain_community.chat_models import ChatOllama
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
@@ -31,13 +30,24 @@ def chat(messages, model, tools=None, stream=True):
         )
 
         async def async_generator():
+            full_content = ""
             async for chunk in callback.aiter():
+                full_content += chunk.content
                 yield {
                     "message": {
                         "role": "assistant",
-                        "content": chunk.content
+                        "content": full_content,
+                        "is_complete": False
                     }
                 }
+            # Send a final message indicating the response is complete
+            yield {
+                "message": {
+                    "role": "assistant",
+                    "content": full_content,
+                    "is_complete": True
+                }
+            }
 
         return async_generator()
     else:
@@ -45,6 +55,7 @@ def chat(messages, model, tools=None, stream=True):
         return {
             "message": {
                 "role": "assistant",
-                "content": response.content
+                "content": response.content,
+                "is_complete": True
             }
         }
