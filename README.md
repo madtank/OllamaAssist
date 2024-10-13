@@ -90,6 +90,31 @@ OllamaAssist is designed to work best with function-calling enabled models, part
 - Adjust system prompts or chat behavior in `llm_helper.py`.
 - Customize the Streamlit interface in `ollama_chatbot.py`.
 
+## Configuration
+
+### Setting the Default Model
+
+The default model used by OllamaAssist can be configured in the `config.py` file. By default, it is set to `llama3.2:latest`. If this model is not available, the first model in the list retrieved from Ollama will be used.
+
+To set a different default model, modify the `DEFAULT_MODEL` variable in the `config.py` file:
+
+```python
+class Config:
+    PAGE_TITLE = "Ollama Tool Chat"
+    DEFAULT_MODEL = "your_preferred_model:version"
+    
+    # Retrieve the list of models using ollama.list()
+    models_info = ollama.list()
+    # Access the list of models
+    model_list = models_info['models']
+    # Extract the model names
+    OLLAMA_MODELS = tuple(model['name'] for model in model_list)
+    
+    # Check if the default model is in the list of models
+    if DEFAULT_MODEL not in OLLAMA_MODELS:
+        # Default to the first model in the list if the default model is not found
+        DEFAULT_MODEL = OLLAMA_MODELS[0]
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
