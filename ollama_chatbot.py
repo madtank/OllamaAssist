@@ -27,8 +27,14 @@ def display_previous_messages():
                 function_name = tool_call["function"]["name"]
                 function_args = tool_call["function"]["arguments"]
                 content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
-                with st.chat_message("tool"):
+                with st.expander(f"Tool Call: {function_name}"):
                     st.markdown(content)
+        elif display_role == "function":
+            function_name = message["name"]
+            function_content = message["content"]
+            content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_content, indent=2)}\n```"
+            with st.expander(f"Function Call: {function_name}"):
+                st.markdown(content)
         else:
             with st.chat_message(display_role):
                 st.markdown(message["content"])
@@ -69,7 +75,8 @@ def generate_response(model, use_tools):
                 for tool_call in assistant_message['tool_calls']:
                     function_name = tool_call["function"]["name"]
                     function_args = tool_call["function"]["arguments"]
-                    with st.chat_message("tool"):
+                    # Display the tool use call during the response generation
+                    with st.expander(f"Tool Call: {function_name}"):
                         content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
                         st.markdown(content)
                     
@@ -92,9 +99,11 @@ def generate_response(model, use_tools):
                             'content': function_response,  # Direct string return
                         }
                         st.session_state.messages.append(tool_message)
-                        with st.chat_message("tool"):
-                            st.markdown(tool_message['content'])
-                
+                        # Display the function call results content during the response generation
+                        content = f"**Function Call Results:**\n```json\n{json.dumps(tool_message['content'], indent=2)}\n```"
+                        with st.expander("Function Call Results"):
+                            st.markdown(content)
+
                 # Stream the assistant's response
                 llm_stream = chat(st.session_state.messages, model=model, stream=True)
                 assistant_response = ""
