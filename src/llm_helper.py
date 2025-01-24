@@ -18,17 +18,18 @@ class PromptTemplateType:
                             Structure your response by using capitalized section titles and a bit of formatting.
 
                             Every time, provide at the end of your answer the following metadata of the supporting document 
-                            (or documents if there is more than one applicable):\n\n
-                            --Document ID\n\n
-                            --Title\n\n
-                            --Hyperlink\n\n
+                            (or documents if there is more than one applicable):
+                            \n\n**Document ID**\n\n
+                            \n\n**Title**\n\n
+                            \n\n**Hyperlink**\n\n
 
                             After the above-mentioned metadata, add a brief warning to the user reminding them of the importance to 
                             verify the information provided in this answer.                           
                             """
 
 def chat(messages, model, tools=None, stream=True):
-    system_prompt = "You are a helpful assistant looking to provide the most accurate information possible."
+    system_prompt = "You are a helpful assistant looking to provide the most accurate information possible. \
+                    You add the formatted metadata at the end of your answer, including: document ID, title, and hyperlink."
 
     # Ensure all messages are correctly formatted
     formatted_messages = []
