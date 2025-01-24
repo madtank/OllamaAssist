@@ -3,7 +3,7 @@ import yaml
 import streamlit as st
 from config import Config
 from src.llm_helper import chat
-from src.tools import sequential_thinking, search_duckduckgo
+from src.tools import sequential_thinking, search_duckduckgo, retrieve_database
 import logging
 
 # Configure logging
@@ -80,6 +80,7 @@ def generate_response(model, use_tools):
                         available_functions = {
                             'sequential_thinking': sequential_thinking,
                             'search_duckduckgo': search_duckduckgo,
+                            'retrieve_database': retrieve_database,
                             'no_op': no_op,
                         }
 

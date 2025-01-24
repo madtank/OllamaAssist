@@ -7,6 +7,15 @@ import logging
 from requests.exceptions import RequestException
 from datetime import datetime, timedelta
 
+from langchain_community.vectorstores import Chroma  # noqa: E402
+from langchain_core.output_parsers import StrOutputParser # noqa: E402
+from langchain_core.runnables import RunnablePassthrough # noqa: E402
+from langchain_huggingface import HuggingFaceEmbeddings # noqa: E402
+from langchain_ollama import ChatOllama # noqa: E402
+from langchain.prompts import ChatPromptTemplate # noqa: E402
+
+from src.llm_helper import PromptTemplateType
+
 class SearchRateLimiter:
     def __init__(self, requests_per_minute: int = 30):
         self.requests_per_minute = requests_per_minute
@@ -165,3 +174,51 @@ def sequential_thinking(tasks: list[str] = None, context: str = "") -> str:
     except Exception as e:
         logging.error(f"Sequential thinking error: {str(e)}")
         return f"Error in sequential thinking process: {str(e)}"
+    
+
+
+def retrieve_database(database_question,
+                    database_storage_path:str="../chromadb_directory",
+                    embedding_model:str="all-MiniLM-L12-v2",
+                    chat_model:str="llama3.2",
+                    prompt_template_type:str=PromptTemplateType.structured_with_context_only
+                    ):
+
+    # Embedding function for computing similarity between query and documents
+    embeddings = HuggingFaceEmbeddings(model_name=embedding_model)
+
+    # Loading the vector store that makes all the vectorized documents retrievable by the model
+    vectorstore = Chroma(embedding_function=embeddings,
+                        collection_name="Labour_Standards_IPGs",
+                        persist_directory=database_storage_path)
+
+    # Assigning a retriever object that will be used in the 'chain' later on
+    retriever = vectorstore.as_retriever()
+
+    # Assigning a prompt object (this will impact the chatbot's behaviour)
+    prompt = ChatPromptTemplate.from_template(prompt_template_type)
+
+    # Local LLM
+    model_local = ChatOllama(model=chat_model)
+
+    # Chain
+    chain = (
+        {"context": retriever, "question": RunnablePassthrough()}
+        | prompt
+        | model_local
+        | StrOutputParser()
+    )
+
+    # user_question = database_question
+    answer = chain.invoke(database_question)
+    
+    return answer
+    
+        
+if __name__ == "__main__":
+
+    answer1 = retrieve_database("tell me about the rules applying to maternity leave", prompt_template_type=PromptTemplateType.structured_with_context_only)
+    print(answer1)
+
+    answer2  = retrieve_database("What is constructive dismissal?", prompt_template_type=PromptTemplateType.structured_with_context_only)
+    print(answer2)

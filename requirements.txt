@@ -1,7 +1,16 @@
+duckduckgo-search==7.2.1
 fastapi==0.115.5
 httpx==0.27.2
 ollama==0.4.2
 pydantic==2.10.2
 python-dotenv==1.0.0
+PyYAML
+streamlit
 uvicorn==0.32.1
-duckduckgo-search==7.2.1
+
+chromadb
+langchain
+langchain-community
+langchain-core
+langchain-huggingface
+langchain-ollama

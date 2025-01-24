@@ -24,3 +24,13 @@ tools:
           description: 'Search query for DuckDuckGo.'
       required:
         - query
+  - name: retrieve_database
+    description: "A function to retrieve a database for Retrieval-Augmented Generation. Lets the chatbot create context-sensitive responses."
+    parameters:
+      type: object
+      properties:
+        database_question:
+          type: string
+          description: 'Search within the provided database for information.'
+      required:
+        - database_question
