@@ -17,7 +17,7 @@ class PromptTemplateType:
 
                             Structure your response by using capitalized section titles and a bit of formatting.
 
-                            Every time, provide at the end of your answer the following metadata of the supporting document 
+                            Always provide at the end of your answer the following metadata of the supporting document 
                             (or documents if there is more than one applicable):
                             \n\n**Document ID**\n\n
                             \n\n**Title**\n\n

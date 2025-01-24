@@ -1,3 +1,4 @@
+# FORK UPDATE: now with added Retrieval-Augmented Generation capacity!
 # OllamaAssist
 
 OllamaAssist is a versatile AI chatbot application that leverages the advanced capabilities of function-calling enabled language models, with a current focus on the Llama family of models. By utilizing Ollama for local model execution and integrating sophisticated function calling and self-reflection mechanisms, OllamaAssist provides an enhanced, context-aware interaction experience.
