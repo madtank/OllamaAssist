@@ -9,7 +9,7 @@ class Config:
     # Access the list of models
     model_list = models_info['models']
     # Extract the model names
-    OLLAMA_MODELS = tuple(model['name'] for model in model_list)
+    OLLAMA_MODELS = tuple(model['model'] for model in model_list)
     
     # Check if the default model is in the list of models
     DEFAULT_MODEL = "llama3.2:latest"

@@ -3,7 +3,7 @@ import yaml
 import streamlit as st
 from config import Config
 from src.llm_helper import chat
-from src.tools import breakthrough_blast, search_duckduckgo
+from src.tools import sequential_thinking, search_duckduckgo
 import logging
 
 # Configure logging
@@ -78,7 +78,7 @@ def generate_response(model, use_tools):
                             pass
                         
                         available_functions = {
-                            'breakthrough_blast': breakthrough_blast,
+                            'sequential_thinking': sequential_thinking,
                             'search_duckduckgo': search_duckduckgo,
                             'no_op': no_op,
                         }
