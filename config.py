@@ -1,7 +1,7 @@
 import ollama
 
 class Config:
-    PAGE_TITLE = "Streamlit AI Chatbot with Ollama Integration and RAG capacity through function tool calling"
+    PAGE_TITLE = "RAG-enabled Tool Calling Chatbot"
     DEFAULT_MODEL = "llama3.2:latest"
 
     # Retrieve the list of models using ollama.list()

@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import json
 import ollama
 
-
 @dataclass
 class PromptTemplateType:
     """Class for prompt templates"""
@@ -12,24 +11,32 @@ class PromptTemplateType:
     unstructured_with_context_and_knowledge_from_model: str = """Answer the {question} both based on your knowledge and the {context}."""
     structured_with_context_only = """                        
                             Answer the {question} based only on the following context: {context}.
+                            Structure your response by using section titles and formatting.
 
-                            Start the answer by inserting: "\n\n==================NEW ANSWER==================\n\n"
+                            Always provide at the end of your answer the metadata from the supporting documents:
 
-                            Structure your response by using capitalized section titles and a bit of formatting.
-
-                            Always provide at the end of your answer the following metadata of the supporting document 
-                            (or documents if there is more than one applicable):
-                            \n\n**Document ID**\n\n
-                            \n\n**Title**\n\n
-                            \n\n**Hyperlink**\n\n
+                            *Document ID
+                            *Title
+                            *Hyperlink
 
                             After the above-mentioned metadata, add a brief warning to the user reminding them of the importance to 
                             verify the information provided in this answer.                           
                             """
+    
+
+@dataclass
+class HyperparametersConfig:
+    temperature:float=0.0
+    top_k:int=5
+
+    
 
 def chat(messages, model, tools=None, stream=True):
-    system_prompt = "You are a helpful assistant looking to provide the most accurate information possible. \
-                    You add the formatted metadata at the end of your answer, including: document ID, title, and hyperlink."
+    system_prompt = """You are a helpful assistant looking to provide the most accurate information possible.
+                        You always provide at the end of your answer the metadata from the supporting documents:
+                        *Document ID
+                        *Title
+                        *Hyperlink"""
 
     # Ensure all messages are correctly formatted
     formatted_messages = []

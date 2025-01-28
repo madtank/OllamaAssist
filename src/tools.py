@@ -181,7 +181,8 @@ def retrieve_database(database_question,
                     database_storage_path:str="../chromadb_directory",
                     embedding_model:str="all-MiniLM-L12-v2",
                     chat_model:str="llama3.2",
-                    prompt_template_type:str=PromptTemplateType.structured_with_context_only
+                    prompt_template_type:str=PromptTemplateType.structured_with_context_only,
+                    hyperparams:dict=None
                     ):
 
     # Embedding function for computing similarity between query and documents
@@ -199,7 +200,7 @@ def retrieve_database(database_question,
     prompt = ChatPromptTemplate.from_template(prompt_template_type)
 
     # Local LLM
-    model_local = ChatOllama(model=chat_model)
+    model_local = ChatOllama(model=chat_model,)
 
     # Chain
     chain = (
