@@ -4,3 +4,4 @@ ollama
 duckduckgo-search
 mcp
 python-dotenv
+pytest
