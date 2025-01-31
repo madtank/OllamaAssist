@@ -163,3 +163,4 @@ cython_debug/
 .vscode/launch.json
 .DS_Store
 .vscode/settings.json
+mcp_config.json
