@@ -1,11 +1,13 @@
+import asyncio
+import inspect
 import json
-import yaml
+import logging
+
 import streamlit as st
+
 from config import Config
 from src.llm_helper import chat
-from src.tools import mcp
-import asyncio
-import logging
+from src.tools import brave, filesystem
 
 # Configure logging
 logging.basicConfig(filename='debug.log', level=logging.DEBUG)
@@ -62,54 +64,42 @@ def process_user_input():
 def load_tools_from_functions():
     tools = []
     available_functions = {
-        'mcp': {
-            'func': mcp,
-            'is_async': True,
-            'parameters': {
-                'tool': {
-                    'type': 'string',
-                    'description': 'Tool to execute. Use "list_available_servers" to see options.'
-                },
-                'server': {
-                    'type': 'string',
-                    'description': 'Optional server name'
-                },
-                'arguments': {
-                    'type': 'object',
-                    'description': 'Tool-specific arguments'
-                }
-            }
-        }
+        'brave': brave,
+        'filesystem': filesystem
     }
     
-    for name, func_info in available_functions.items():
-        import inspect
-        sig = inspect.signature(func_info['func'])
-        parameters = {
-            'type': 'object',
-            'properties': {}
-        }
+    for name, func in available_functions.items():
+        sig = inspect.signature(func)
+        params = {}
         
         for param_name, param in sig.parameters.items():
-            param_type = 'string'  # default type
-            if param.annotation != inspect.Parameter.empty:
-                if param.annotation == list:
-                    param_type = 'array'
-                elif param.annotation == dict:
-                    param_type = 'object'
-            
-            parameters['properties'][param_name] = {
+            param_type = 'string'  # default
+            if param.annotation == int:
+                param_type = 'integer'
+            elif param.annotation == list:
+                param_type = 'array'
+            elif param.annotation == dict:
+                param_type = 'object'
+                
+            params[param_name] = {
                 'type': param_type,
-                'description': ''
+                'description': '',  # Let the docstring explain the parameters
             }
-        
+            
+            # Add default value if one exists
+            if param.default != param.empty:
+                params[param_name]['default'] = param.default
+
         tools.append({
             'type': 'function',
             'function': {
                 'name': name,
-                'description': func_info['func'].__doc__ or '',
-                'parameters': parameters,
-                'is_async': func_info['is_async']
+                'description': func.__doc__,
+                'parameters': {
+                    'type': 'object',
+                    'properties': params
+                },
+                'is_async': asyncio.iscoroutinefunction(func)
             }
         })
     return tools
@@ -138,24 +128,26 @@ def generate_response(model, use_tools):
                         st.markdown(content)
                     
                     available_functions = {
-                        'mcp': {'func': mcp, 'is_async': True},
-                        'no_op': {'func': lambda: None, 'is_async': False}
+                        'brave': {'func': brave, 'is_async': True},
+                        'filesystem': {'func': filesystem, 'is_async': True}
                     }
 
                     if function_name in available_functions:
                         func_info = available_functions[function_name]
                         try:
-                            # Clean up arguments for MCP
-                            if function_name == 'mcp':
-                                args = function_args if isinstance(function_args, dict) else json.loads(function_args)
-                                # Remove the automatic debug flag addition
-                                if args.get('tool') == 'list_available_servers':
-                                    args = {'tool': 'list_available_servers'}
+                            # Parse arguments if they're a string
+                            args = function_args if isinstance(function_args, dict) else json.loads(function_args)
                             
                             logging.debug(f"Calling {function_name} with args: {args}")
                             
                             if func_info['is_async']:
-                                function_response = asyncio.run(func_info['func'](**args))
+                                try:
+                                    function_response = asyncio.run(func_info['func'](**args))
+                                    if isinstance(function_response, dict) and 'error' in function_response:
+                                        raise Exception(function_response['error'])
+                                except Exception as e:
+                                    logging.error(f"Async function error: {str(e)}", exc_info=True)
+                                    raise
                             else:
                                 function_response = func_info['func'](**args)
                             
