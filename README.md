@@ -1,13 +1,13 @@
 # OllamaAssist
 
-OllamaAssist is a chatbot application that combines Ollama's local LLM capabilities with MCP (Modular Command Protocol) - a universal tool protocol for LLMs. Think of MCP as "USB for AI tools" - it provides a standardized way for LLMs to interact with various tools and services.
+A Streamlit interface for Ollama models with full MCP (Model Context Protocol) integration. Works with any tool-calling capable model like deepseek-r1-tool-calling:14b or llama2:latest.
 
 ## Key Features
 
-- **Local LLM Execution**: Run models locally using Ollama
+- **Local LLM Execution**: Run models locally using Ollama (deepseek-r1)
 - **MCP Integration**: Universal tool protocol support
-- **Streamlit Interface**: Easy-to-use chat interface
-- **Function Calling**: Enhanced with MCP's tool ecosystem
+- **Streamlit Interface**: Real-time streaming chat interface
+- **Dynamic Tool Support**: Automatic capability detection
 
 ## What is MCP (Model Context Protocol)?
 
@@ -27,27 +27,32 @@ Learn more:
 ## Prerequisites
 
 - Python 3.9+
-- Ollama installed and running
-- MCP-compatible tools you wish to use
+- Ollama desktop app installed and running
+- MCP-compatible tools
 - python-dotenv
+- An Ollama-compatible model with tool-calling support
 
 ## Installation
 
-1. Clone the repository:
+1. Prerequisites:
+   ```bash
+   # Install Ollama desktop app from https://ollama.ai/download
+   
+   # Make sure Ollama is running
+   # Then pull the recommended model (or choose another tool-calling capable model)
+   ollama pull MFDoom/deepseek-r1-tool-calling:14b
+   
+   # Alternative models that support tool calling:
+   # ollama pull llama2:latest
+   ```
+
+2. Setup:
    ```bash
    git clone https://github.com/madtank/OllamaAssist.git
    cd OllamaAssist
-   ```
-
-2. Install dependencies:
-   ```bash
+   python -m venv venv
+   source venv/bin/activate
    pip install -r requirements.txt
-   ```
-
-3. Configure environment:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your settings
    ```
 
 ## Environment Configuration
@@ -95,15 +100,23 @@ OllamaAssist uses MCP to provide powerful capabilities through standardized tool
 
 ### Available MCP Servers
 
-MCP has a growing ecosystem of tools. Some popular ones include:
+The project supports various MCP servers:
 
-| Server | Purpose | Package |
-|--------|----------|---------|
-| brave-search | Web & local search | @modelcontextprotocol/server-brave-search |
-| filesystem | File operations | @modelcontextprotocol/server-filesystem |
-| sequential-thinking | Structured reasoning | @modelcontextprotocol/server-sequential-thinking |
+#### Core Functionality
+- **brave-search** - Web and local search capabilities
+- **filesystem** - Secure file operations
+- **chromadb** - Vector database operations
+- **postgres** - SQL database integration
+- **mcp-memory** - Long-term context persistence
+- **sqlite** - Lightweight database operations
 
-Find more at the [MCP Servers Repository](https://github.com/modelcontextprotocol/servers)
+#### AI & Development
+- **huggingface** - Model and dataset access
+- **langchain** - AI workflow integration
+- **git** - Repository operations
+- **jupyter** - Notebook integration
+
+Check out [Awesome MCP Servers](https://github.com/punkpeye/awesome-mcp-servers) for more.
 
 ### Adding MCP Servers
 
@@ -128,22 +141,16 @@ For services requiring authentication:
 
 ## Using MCP Tools
 
-OllamaAssist automatically discovers and uses available MCP tools. Example interactions:
-
+Example tool implementation:
 ```python
-# Web search
-await mcp(
-    server="brave-search",
-    tool="brave_web_search",
-    arguments={"query": "search terms"}
-)
-
-# File operations
-await mcp(
-    server="filesystem",
-    tool="read_file",
-    arguments={"path": "/path/to/file"}
-)
+async def brave(action: str, query: str = "", count: int = 5) -> Any:
+    """Brave Search API wrapper"""
+    server_name = "brave-search"
+    return await mcp(
+        server=server_name,
+        tool=f"brave_{action}_search",
+        arguments={"query": query, "count": count}
+    )
 ```
 
 ## Adding Custom MCP Tools
@@ -154,15 +161,18 @@ await mcp(
 
 ## Running the Application
 
-1. Start Ollama:
-   ```bash
-   ollama serve
-   ```
-
+1. Ensure Ollama desktop app is running
 2. Launch OllamaAssist:
    ```bash
    streamlit run ollama_chatbot.py
    ```
+
+## Testing
+
+Run tests:
+```bash
+python -m pytest tests/test_tools.py -v
+```
 
 ## Development
 
@@ -187,11 +197,17 @@ mcp install your_server.py
 
 ## Contributing
 
-Contributions welcome! Please feel free to:
-- Add new MCP tool integrations
-- Improve documentation
-- Submit bug fixes
-- Enhance the user interface
+1. Fork the repository
+2. Create a feature branch
+3. Test your changes
+4. Submit a pull request
+
+## Roadmap
+
+- [ ] Additional MCP server integrations
+- [ ] Enhanced model capability detection
+- [ ] Advanced tool chaining
+- [ ] UI improvements for tool interactions
 
 ## License
 

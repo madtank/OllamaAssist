@@ -4,6 +4,7 @@ Provides simplified interfaces to MCP servers."""
 from typing import Any
 from src.mcp_client import mcp
 import logging
+from pathlib import Path
 
 async def brave(action: str, query: str = "", count: int = 5, offset: int = 0) -> Any:
     """Brave Search API wrapper"""
@@ -40,50 +41,59 @@ async def brave(action: str, query: str = "", count: int = 5, offset: int = 0) -
         return {"error": f"Brave search failed: {str(e)}"}
 
 async def filesystem(action: str, path: str = "", content: str = "") -> Any:
-    """Filesystem operations wrapper.
-    Maps simple action names to MCP filesystem server tools.
+    """Filesystem operations wrapper for MCP filesystem server.
     
     Actions:
-    - read: Read a file (maps to read_file)
-    - write: Write to a file (maps to write_file)
-    - list: List directory contents (maps to list_directory)
-    - info: Get file info (maps to get_file_info)
-    - search: Search for files (maps to search_files)
-    - allowed: Show allowed directories (maps to list_allowed_directories)
+    - read_file: Read contents of a file
+    - write_file: Write content to a file
+    - list_directory: List contents of a directory
+    - get_file_info: Get metadata about a file
+    - search_files: Search for files matching pattern
+    - list_allowed_directories: Show accessible directories
     """
     try:
         server_name = "filesystem"
         
-        # Map simple actions to MCP tool names
-        tool_map = {
-            "read": "read_file",
-            "write": "write_file",
-            "list": "list_directory",
-            "info": "get_file_info",
-            "search": "search_files",
-            "allowed": "list_allowed_directories"
-        }
+        # Handle list_allowed_directories separately since it needs no path
+        if action == "list_allowed_directories":
+            return await mcp(server=server_name, tool=action, arguments={})
+            
+        # For all other actions, validate path if provided
+        if path:
+            # Get allowed directories first
+            allowed_dirs = await mcp(server=server_name, tool="list_allowed_directories", arguments={})
+            if "error" in allowed_dirs:
+                return allowed_dirs
+                
+            # Check if path is within allowed directories
+            path_obj = Path(path).resolve()
+            if not any(str(path_obj).startswith(str(Path(allowed_dir).resolve())) 
+                      for allowed_dir in allowed_dirs.get("directories", [])):
+                return {"error": f"Path '{path}' is not in allowed directories"}
 
-        if action not in tool_map:
+        # Handle specific tools directly
+        if action == "read_file":
+            return await mcp(server=server_name, tool=action, arguments={"path": path})
+            
+        elif action == "write_file":
+            return await mcp(server=server_name, tool=action, 
+                           arguments={"path": path, "content": content})
+            
+        elif action == "list_directory":
+            return await mcp(server=server_name, tool=action, arguments={"path": path or "."})
+            
+        elif action == "get_file_info":
+            return await mcp(server=server_name, tool=action, arguments={"path": path})
+            
+        elif action == "search_files":
+            return await mcp(server=server_name, tool=action, 
+                           arguments={"path": path, "pattern": content})
+        
+        else:
             return {
-                "error": f"Unknown filesystem action '{action}'. Available actions: {', '.join(tool_map.keys())}"
+                "error": f"Unknown action '{action}'. Available actions: read_file, write_file, "
+                        "list_directory, get_file_info, search_files, list_allowed_directories"
             }
-
-        # Build arguments based on the tool
-        tool = tool_map[action]
-        arguments = {}
-
-        if tool == "read_file":
-            arguments = {"path": path}
-        elif tool == "write_file":
-            arguments = {"path": path, "content": content}
-        elif tool in ["list_directory", "get_file_info"]:
-            arguments = {"path": path}
-        elif tool == "search_files":
-            arguments = {"path": path, "pattern": content}
-        # list_allowed_directories needs no arguments
-
-        return await mcp(server=server_name, tool=tool, arguments=arguments)
 
     except Exception as e:
         logging.error(f"Filesystem operation error: {str(e)}", exc_info=True)

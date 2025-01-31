@@ -1,7 +1,6 @@
-streamlit
-pyyaml
-ollama
-duckduckgo-search
-mcp
-python-dotenv
-pytest
+streamlit==1.41.1
+ollama==0.4.7
+mcp==1.2.1
+python-dotenv==1.0.1
+pytest==8.3.4
+pytest-asyncio==0.25.3
