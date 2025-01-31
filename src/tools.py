@@ -1,167 +1,208 @@
-from typing import Dict, Any, List, Optional, Union
-from duckduckgo_search import DDGS
-import random
-import time
-import os
+from typing import Dict, Optional, Union, List
 import logging
-from requests.exceptions import RequestException
-from datetime import datetime, timedelta
+from pathlib import Path
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from .config import config
 
-class SearchRateLimiter:
-    def __init__(self, requests_per_minute: int = 30):
-        self.requests_per_minute = requests_per_minute
-        self.requests = []
-    
-    def wait_if_needed(self):
-        now = datetime.now()
-        # Remove requests older than 1 minute
-        self.requests = [t for t in self.requests if now - t < timedelta(minutes=1)]
-        if len(self.requests) >= self.requests_per_minute:
-            sleep_time = (self.requests[0] + timedelta(minutes=1) - now).total_seconds()
-            if sleep_time > 0:
-                time.sleep(sleep_time)
-        self.requests.append(now)
+logging.basicConfig(level=config.log_level)
+logger = logging.getLogger(__name__)
 
-def search_duckduckgo(
-    query: str,
-    search_type: str = "text",
-    max_results: int = 5,
-    max_retries: int = 3,
-    region: str = "wt-wt",
-    safesearch: str = "moderate",
-    proxy: Optional[str] = None
-) -> Union[str, List[Dict[str, Any]]]:
-    """
-    Enhanced DuckDuckGo search function supporting multiple search types and proxy.
-    """
-    rate_limiter = SearchRateLimiter()
-    proxy = proxy or os.getenv("DDGS_PROXY")
-    
-    for attempt in range(max_retries):
-        try:
-            rate_limiter.wait_if_needed()
-            
-            with DDGS(proxy=proxy, timeout=20) as ddgs:
-                time.sleep(random.uniform(0.5, 1.5))
-                
-                if search_type == "text":
-                    # Explicitly convert generator to list and validate results
-                    results = list(ddgs.text(
-                        keywords=query,
-                        region=region,
-                        safesearch=safesearch,
-                        max_results=max_results
-                    ))
-                    # Log raw results for debugging
-                    logging.debug(f"Raw DuckDuckGo results: {results}")
-                    
-                    if not results:
-                        return f"No results found for query: {query}"
-                    
-                    return format_text_results(results)
-                
-                # Handle other search types...
-                # ...existing code...
-                results = []
-                if search_type == "text":
-                    results = list(ddgs.text(query, max_results=max_results, region=region, safesearch=safesearch))
-                elif search_type == "news":
-                    results = list(ddgs.news(query, max_results=max_results, region=region, safesearch=safesearch))
-                elif search_type == "images":
-                    results = list(ddgs.images(query, max_results=max_results, region=region, safesearch=safesearch))
-                elif search_type == "chat":
-                    return ddgs.chat(query, model="claude-3-haiku")
-                
-                if not results:
-                    return f"No {search_type} results found for query: {query}"
-                
-                if search_type == "text":
-                    return format_text_results(results)
-                return results
-                
-        except ValueError as ve:
-            handle_value_error(ve, attempt, max_retries)
-        except RequestException as re:
-            handle_request_exception(re, attempt, max_retries)
-        except Exception as e:
-            if attempt == max_retries - 1:
-                logging.error(f"Search error: {str(e)}")
-                return f"Search error: {str(e)}"
-            time.sleep((attempt + 1) * 2)
+async def mcp(
+    server: Optional[str] = None,
+    tool: Optional[str] = None,
+    arguments: Optional[Dict] = None
+) -> Union[str, Dict, List]:
+    """MCP tool execution with environment-aware configuration"""
+    try:
+        if tool == 'list_available_servers':
+            servers = config.get_enabled_servers()
+            return {
+                'available_servers': list(servers.keys()),
+                'hint': 'Use tool_details with a server name to see available tools'
+            }
 
-def format_text_results(results: List[Dict[str, str]]) -> str:
-    formatted = []
-    for idx, result in enumerate(results, 1):
-        # Debug log for missing fields
-        if not all(k in result for k in ['title', 'body', 'link']):
-            logging.debug(f"Incomplete result data: {result}")
-        
-        title = result.get('title', 'No Title')
-        body = result.get('body', 'No Description')
-        # DuckDuckGo API might return URL in different fields
-        url = result.get('link') or result.get('url') or result.get('href', 'No URL')
-        
-        formatted.append(
-            f"{idx}. {title}\n"
-            f"   {body}\n"
-            f"   URL: {url}\n"
-        )
-    return "\n".join(formatted)
+        if not server:
+            return {
+                'error': 'Server parameter required',
+                'hint': 'Use list_available_servers to see available servers'
+            }
 
-def handle_value_error(error: ValueError, attempt: int, max_retries: int):
-    if "_text_extract_json" in str(error):
-        logging.warning(f"DuckDuckGo API extraction error: {str(error)}")
-        if attempt < max_retries - 1:
-            time.sleep((attempt + 1) * 2)
-        else:
-            raise ValueError("Search service temporarily unavailable")
-    raise error
+        server_config = config.get_server_config(server)
+        if not server_config:
+            return {
+                'error': f'Server {server} not found or disabled',
+                'available_servers': list(config.get_enabled_servers().keys())
+            }
 
-def handle_request_exception(error: RequestException, attempt: int, max_retries: int):
-    if '202 Ratelimit' in str(error):
-        wait_time = (attempt + 1) * 3
-        if attempt < max_retries - 1:
-            logging.warning(f"Rate limit hit, waiting {wait_time} seconds")
-            time.sleep(wait_time)
-        else:
-            raise RequestException("Search rate limit reached")
-    raise error
+        # Connect to server using configuration
+        async with stdio_client(StdioServerParameters(
+      3) To execute a specific tool on a server:
+         >>> await mcp(
+               server='browser', 
+               tool='openUrl',
+               arguments={'url': 'https://example.com'}
+             )
+         Returns the execution result, often JSON or a success/error message.
 
-def sequential_thinking(tasks: list[str] = None, context: str = "") -> str:
-    """
-    🔄 Sequential Thinking Process: A structured approach to task planning and execution.
+    NOTE:
+      - **All** actions (listing servers, discovering tools, running any tool) must be
+        performed via `mcp`. There are no other functions you should call to interact
+        with the underlying servers or tools.
+      - If a server requires configuration or environment variables, load them through
+        the config file or pass them in the `config_path`. `mcp` will handle everything.
+
+    PARAMETERS:
+      server (str, optional):
+        The name of the target server. Required for step (2) and step (3).
+      tool (str, optional):
+        The action/command to run, which can be:
+          - 'list_available_servers' to discover all servers (Step 1).
+          - 'tool_details' to list all tools within a chosen server (Step 2).
+          - An actual tool name (e.g., 'openUrl', 'writeFile', etc.) (Step 3).
+      arguments (Dict, optional):
+        A dictionary of arguments required by the tool for execution. 
+        For instance, {'url': 'https://example.com'} for openUrl.
+      config_path (str or Path, optional):
+        An explicit path to a config file if not using the default search locations.
+
+    RETURNS:
+      Union[str, Dict, List]:
+        - JSON-encoded string or dictionary containing results, errors, or hints.
+        - For server- or tool-listing, a JSON string with structured data.
+        - For actual tool execution, the raw (stringified) result from the tool.
+
+    IMPORTANT:
+      - This function must be used for every single request or command. 
+      - Avoid calling lower-level server or tool APIs directly—always go through MCP.
+
+    RAISES:
+      Exception: If any errors occur in loading configuration, connecting to the server,
+                 or executing the tool.
+    ----------------------------------------------------------------------------------------
     """
     try:
-        # Handle tasks input
-        if isinstance(tasks, str):
-            # Try to parse if it's a JSON string
-            import json
-            try:
-                tasks = json.loads(tasks)
-            except json.JSONDecodeError:
-                tasks = [tasks]  # Treat as single task if not valid JSON
+        # Set up logging for debugging config path
+        logging.debug(f"Input config_path: {config_path}")
         
-        if not tasks:
-            tasks = ["Analyze requirements", "Identify key components", "Plan execution steps"]
+        # Get project root (parent of src directory)
+        project_root = Path(__file__).parent.parent
         
-        # Ensure tasks is a flat list of strings
-        if isinstance(tasks, list) and len(tasks) == 1 and isinstance(tasks[0], str):
-            # Handle case where task is a single string that needs to be split
-            if ',' in tasks[0]:
-                tasks = [t.strip() for t in tasks[0].split(',')]
-            elif len(tasks[0]) > 0:
-                tasks = [tasks[0]]
+        # Check config locations
+        search_paths = []
+        if config_path:
+            search_paths.append(Path(config_path))
+        else:
+            search_paths.extend([
+                project_root / 'mcp_config.json',  # Project root
+                Path.cwd() / 'mcp_config.json',    # Current working directory
+                Path.home() / '.config' / 'autogen' / 'mcp_config.json',  # User config
+            ])
+        
+        # Log all paths being checked
+        logging.debug(f"Project root: {project_root}")
+        logging.debug(f"Current working directory: {Path.cwd()}")
+        logging.debug(f"Searching config in paths: {search_paths}")
+        
+        # Find first existing config file
+        found_config = None
+        for path in search_paths:
+            logging.debug(f"Checking path: {path} - Exists: {path.exists()}")
+            if path.exists():
+                found_config = path
+                break
+        
+        if not found_config:
+            paths_checked = '\n'.join(str(p) for p in search_paths)
+            error_msg = f"Error: No configuration file found. Checked:\n{paths_checked}"
+            logging.error(error_msg)
+            return error_msg
 
-        # Format the planning output
-        plan = "🎯 Sequential Planning Process:\n\n"
-        for idx, task in enumerate(tasks, 1):
-            plan += f"{idx}. {task}\n"
+        logging.debug(f"Using config file: {found_config}")
         
-        if context:
-            plan += f"\n📝 Context Analysis:\n{context}\n"
+        # Determine system-specific npx path
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            default_npx = Path("/opt/homebrew/bin/npx")
+        elif system == "Windows":
+            default_npx = Path(os.getenv("APPDATA", "")) / "npm/npx.cmd"
+        else:  # Linux/Other
+            default_npx = Path("/usr/local/bin/npx")
+
+        # Fallback to just "npx" if default doesn't exist
+        npx_path = str(default_npx if default_npx.exists() else "npx")
+
+        # Load config data
+        with open(found_config) as f:
+            config_data = json.load(f)
+            servers = config_data.get('mcpServers', {})
+
+        # 1) Discovery of all servers
+        if tool == 'list_available_servers':
+            enabled_servers = [name for name, cfg in servers.items() if cfg.get('enabled', True)]
+            return json.dumps({
+                'available_servers': enabled_servers,
+                'hint': 'Use tool_details with a server name to see available tools'
+            }, indent=2)
+
+        # 2) Listing tools for a specific server
+        if tool == 'tool_details' and not server:
+            return json.dumps({
+                'error': 'Server parameter required for tool_details',
+                'hint': 'First use list_available_servers to see available servers',
+                'available_servers': [name for name, cfg in servers.items() if cfg.get('enabled', True)]
+            }, indent=2)
+
+        # If user didn’t specify a server for actual tool execution
+        if not server:
+            return json.dumps({
+                'error': 'Server parameter required',
+                'hint': 'Use list_available_servers to see available servers'
+            }, indent=2)
         
-        plan += "\n✅ Planning phase complete. Ready for execution."
-        return plan
+        # Validate server name
+        if server not in servers:
+            return json.dumps({
+                'error': f'Server {server} not found',
+                'available_servers': [name for name, cfg in servers.items() if cfg.get('enabled', True)],
+                'hint': 'Use one of the available servers listed above'
+            }, indent=2)
+
+        # Build connection parameters
+        config = servers[server]
+        command = npx_path if config['command'] == 'npx' else config['command']
+        env = os.environ.copy()
+        env.update(config.get('env', {}))
+        arguments = arguments or {}
+
+        # Connect to server
+        async with stdio_client(StdioServerParameters(
+            command=command, 
+            args=config.get('args', []), 
+            env=env
+        )) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+
+                # 2a) Return tool details for a server
+                if tool == 'tool_details':
+                    result = await session.list_tools()
+                    return json.dumps({
+                        'server': server,
+                        'available_tools': [{
+                            'name': t.name,
+                            'description': t.description,
+                            'input_schema': t.inputSchema
+                        } for t in result.tools],
+                        'hint': 'Use these tool names with this server to execute commands'
+                    }, indent=2)
+
+                # 3) Execute actual tool
+                if not tool:
+                    return "Error: Tool name required"
+
+                result = await session.call_tool(tool, arguments=arguments)
+                return str(result)
+
     except Exception as e:
-        logging.error(f"Sequential thinking error: {str(e)}")
-        return f"Error in sequential thinking process: {str(e)}"
+        return f"Error: {str(e)}"
