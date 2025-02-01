@@ -164,7 +164,7 @@ async def brave(action: str, query: str = "", count: int = 5) -> Any:
 1. Ensure Ollama desktop app is running
 2. Launch OllamaAssist:
    ```bash
-   streamlit run src/streamlit_app.py
+   streamlit run streamlit_app.py
    ```
 
 ## Testing
