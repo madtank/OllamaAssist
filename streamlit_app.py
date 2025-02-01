@@ -32,52 +32,41 @@ def setup_sidebar():
         # Add system prompt editor
         render_system_prompt_editor()
         
-        # Model selection
+        # Model selection and tool toggle
         model = st.selectbox('Model:', config.OLLAMA_MODELS, 
                            index=config.OLLAMA_MODELS.index(config.DEFAULT_MODEL))
+        use_tools = st.toggle('Use Tools', value=True)
         
-        # Display tool details
-        tools = load_tools_from_functions()
-        display_tool_details(tools)
+        # Display tool details if enabled
+        if use_tools:
+            tools = load_tools_from_functions()
+            display_tool_details(tools)
             
         if st.button('New Chat', key='new_chat', help='Start a new chat'):
             st.session_state.messages = []
             st.rerun()
             
-    return model
+    return model, use_tools
 
 def display_previous_messages():
-    # Create a container for messages
-    with st.container():
-        for message in st.session_state.messages:
-            display_role = message["role"]
-            if display_role == "assistant" and "tool_calls" in message:
-                for tool_call in message["tool_calls"]:
-                    function_name = tool_call["function"]["name"]
-                    function_args = tool_call["function"]["arguments"]
-                    content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
-                    with st.chat_message("tool"):
-                        st.markdown(content)
-            else:
-                with st.chat_message(display_role):
-                    st.markdown(message["content"])
+    for message in st.session_state.messages:
+        display_role = message["role"]
+        if display_role == "assistant" and "tool_calls" in message:
+            for tool_call in message["tool_calls"]:
+                function_name = tool_call["function"]["name"]
+                function_args = tool_call["function"]["arguments"]
+                content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
+                with st.chat_message("tool"):
+                    st.markdown(content)
+        else:
+            with st.chat_message(display_role):
+                st.markdown(message["content"])
 
 def process_user_input():
-    # Create empty element to maintain spacing
-    st.empty()
-    
-    # Put input outside any container to maintain bottom positioning
-    user_prompt = st.chat_input("What would you like to ask?")
-    
-    # Place toggle in a floating element above the chat input
-    use_tools = st.toggle('🔧', value=True, help="Enable/Disable Tools", key="tools_toggle")
-    
-    if user_prompt:
+    if user_prompt := st.chat_input("What would you like to ask?"):
         with st.chat_message("user"):
             st.markdown(user_prompt)
         st.session_state.messages.append({"role": "user", "content": user_prompt})
-    
-    return use_tools
 
 def load_tools_from_functions():
     """Load tools from the registry for LLM usage"""
@@ -206,14 +195,12 @@ def main():
         initial_sidebar_state="expanded"
     )
     st.title(config.PAGE_TITLE)
+    model, use_tools = setup_sidebar()
     
     if "messages" not in st.session_state:
         st.session_state.messages = []
     
-    # Get model before message display
-    model = setup_sidebar()
-    
-    # Show quick start buttons at top
+    # Show quick start buttons and handle their actions
     quick_start_action = show_quick_start_buttons()
     if quick_start_action:
         st.session_state.messages.append({
@@ -222,14 +209,8 @@ def main():
         })
         st.rerun()
     
-    # Create a container for messages
-    with st.container():
-        display_previous_messages()
-    
-    # Input and tools toggle will be at bottom
-    use_tools = process_user_input()
-    
-    # Handle response generation
+    display_previous_messages()
+    process_user_input()
     generate_response(model, use_tools)
 
 if __name__ == '__main__':
