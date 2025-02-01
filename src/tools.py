@@ -1,14 +1,8 @@
-import os
-import json
-from pathlib import Path
-from typing import Optional, Union, Dict, List, Any
-from dotenv import load_dotenv
-import asyncio
-import platform
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-from .mcp_client import mcp
 import logging
+import asyncio
+from typing import Any
+from dotenv import load_dotenv
+from .mcp_client import mcp
 
 # Load environment variables
 load_dotenv()

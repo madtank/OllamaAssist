@@ -2,11 +2,9 @@
 Dynamic MCP (Model Context Protocol) client that provides access to various server capabilities.
 """
 import json
-import asyncio
 import os
 import platform
 from pathlib import Path
-from typing import Any
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -82,8 +80,8 @@ async def mcp(server: str = None, tool: str = None, arguments: dict = None):
 
         # Connect to server and execute tool
         async with stdio_client(StdioServerParameters(
-            command=command, 
-            args=config.get('args', []), 
+            command=command,
+            args=config.get('args', []),
             env=env
         )) as (read, write):
             async with ClientSession(read, write) as session:

@@ -6,7 +6,7 @@ import logging
 import streamlit as st
 
 from src.config import config
-from src.llm_helper import chat  # Removed mcp_manager since it's not used
+from src.llm_helper import chat
 from src.tools import brave, filesystem
 from src.ui import render_system_prompt_editor
 from src.prompts import SystemPrompt
@@ -212,7 +212,7 @@ def show_quick_start_buttons():
     st.markdown("### 🚀 Quick Start")
     st.markdown("Choose an action to begin:")
     
-    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     # Only show buttons if no messages exist
     if not st.session_state.messages:
@@ -231,14 +231,7 @@ def show_quick_start_buttons():
         with col5:
             if st.button("🌎 Global Tech News"):
                 return "Can you find the latest global technology news updates?"
-        with col6:
-            if st.button("💡 Startup Insights"):
-                return "What are some emerging AI startups and their innovations?"
-        with col7:
-            if st.button("🚀 Space & AI Exploration"):
-                return "How is AI being used in space exploration and research?"
     return None
-
 
 def main():
     st.set_page_config(
