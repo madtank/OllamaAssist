@@ -5,9 +5,11 @@ import logging
 
 import streamlit as st
 
-from config import Config
-from src.llm_helper import chat
+from src.config import config
+from src.llm_helper import chat  # Removed mcp_manager since it's not used
 from src.tools import brave, filesystem
+from src.ui import render_system_prompt_editor
+from src.prompts import SystemPrompt
 
 # Configure logging
 logging.basicConfig(filename='debug.log', level=logging.DEBUG)
@@ -27,7 +29,13 @@ def display_tool_details(tools):
 def setup_sidebar():
     with st.sidebar:
         st.markdown("# Chat Options")
-        model = st.selectbox('What model would you like to use?', Config.OLLAMA_MODELS, index=Config.OLLAMA_MODELS.index(Config.DEFAULT_MODEL))
+        
+        # Add system prompt editor
+        render_system_prompt_editor()
+        
+        # Model selection and tool toggle
+        model = st.selectbox('Model:', config.OLLAMA_MODELS, 
+                           index=config.OLLAMA_MODELS.index(config.DEFAULT_MODEL))
         use_tools = st.toggle('Use Tools', value=True)
         
         # Display tool details if enabled
@@ -38,14 +46,14 @@ def setup_sidebar():
         if st.button('New Chat', key='new_chat', help='Start a new chat'):
             st.session_state.messages = []
             st.rerun()
+            
     return model, use_tools
 
 def display_previous_messages():
     for message in st.session_state.messages:
         display_role = message["role"]
         if display_role == "assistant" and "tool_calls" in message:
-            # Fix: iterate over the tool_calls list properly
-            for tool_call in message["tool_calls"]:  # Changed from: for tool_call in message
+            for tool_call in message["tool_calls"]:
                 function_name = tool_call["function"]["name"]
                 function_args = tool_call["function"]["arguments"]
                 content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
@@ -107,8 +115,16 @@ def load_tools_from_functions():
 def generate_response(model, use_tools):
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
         with st.spinner('Generating response...'):
+            # Get current system prompt
+            system_prompt = SystemPrompt(
+                additional_instructions=st.session_state.get('additional_instructions')
+            ).get_full_prompt()
+            
+            # Add system prompt to messages
+            messages = [{"role": "system", "content": system_prompt}] + st.session_state.messages
+            
             tools = load_tools_from_functions() if use_tools else []
-            response = chat(st.session_state.messages, model=model, tools=tools, stream=False)
+            response = chat(messages, model=model, tools=tools, stream=False)
             
             if "tool_calls" in response['message']:
                 assistant_message = response['message']
@@ -168,7 +184,7 @@ def generate_response(model, use_tools):
                             logging.error(error_message)
 
                 # Stream the assistant's response
-                llm_stream = chat(st.session_state.messages, model=model, stream=True)
+                llm_stream = chat(messages, model=model, stream=True)
                 assistant_response = ""
                 with st.chat_message("assistant"):
                     stream_placeholder = st.empty()
@@ -180,7 +196,7 @@ def generate_response(model, use_tools):
                 st.session_state.messages.append({"role": "assistant", "content": assistant_response})
             else:
                 # Handle responses without tool calls
-                llm_stream = chat(st.session_state.messages, model=model, stream=True)
+                llm_stream = chat(messages, model=model, stream=True)
                 assistant_response = ""
                 with st.chat_message("assistant"):
                     stream_placeholder = st.empty()
@@ -196,27 +212,40 @@ def show_quick_start_buttons():
     st.markdown("### 🚀 Quick Start")
     st.markdown("Choose an action to begin:")
     
-    col1, col2, col3 = st.columns(3)  # Changed to 3 columns
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
     
     # Only show buttons if no messages exist
     if not st.session_state.messages:
         with col1:
-            if st.button("📰 Deepseek R1 News"):
-                return "Can you tell me about the latest news regarding Deepseek R1?"
+            if st.button("🔍 Deep Seek AI News"):
+                return "Can you help me search the web for projects integrating with Deep Seek AI, as well as other important news about it?"
         with col2:
-            if st.button("📂 Check Local Files"):
-                return "Can you help me explore the local files and directories?"
+            if st.button("📂 List Files & Directories"):
+                return "Can you list the available directories and the files within them?"
         with col3:
-            if st.button("🖥️ Test MCP Servers"):
-                return "Could you help me list all available MCP servers and then test their functionality? First, show me the list of servers, and then we can try some basic operations on them."
+            if st.button("🛠️ Available Tools"):
+                return "What tools do you have access to and how can they help me?"
+        with col4:
+            if st.button("📊 AI Trends & Innovations"):
+                return "What are the latest trends and innovations in AI?"
+        with col5:
+            if st.button("🌎 Global Tech News"):
+                return "Can you find the latest global technology news updates?"
+        with col6:
+            if st.button("💡 Startup Insights"):
+                return "What are some emerging AI startups and their innovations?"
+        with col7:
+            if st.button("🚀 Space & AI Exploration"):
+                return "How is AI being used in space exploration and research?"
     return None
+
 
 def main():
     st.set_page_config(
-        page_title=Config.PAGE_TITLE,
+        page_title=config.PAGE_TITLE,
         initial_sidebar_state="expanded"
     )
-    st.title(Config.PAGE_TITLE)
+    st.title(config.PAGE_TITLE)
     model, use_tools = setup_sidebar()
     
     if "messages" not in st.session_state:
