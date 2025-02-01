@@ -218,7 +218,7 @@ def show_quick_start_buttons():
     if not st.session_state.messages:
         with col1:
             if st.button("🔍 Web Search"):
-                return "Can you help me search the web for some information?"
+                return "Search for deepseek r1 news find the latest news and interesting projects."
         with col2:
             if st.button("📂 File Operations"):
                 return "Can you help me explore and manage local files?"
