@@ -1,241 +1,211 @@
-import json
-import yaml
-import streamlit as st
-import sys
-from pathlib import Path
 import asyncio
+import inspect
+import json
 import logging
 
-# Add project root to Python path to fix imports
-project_root = str(Path(__file__).parent.parent)
-if project_root not in sys.path:
-    sys.path.append(project_root)
+import streamlit as st
 
-from src.llm_helper import chat, mcp_manager
-from config import Config
-from ollama_model_info import ModelManager
+from src.config import config
+from src.llm_helper import chat  # Removed mcp_manager since it's not used
+from src.tools import brave, filesystem
+from src.ui import render_system_prompt_editor
+from src.prompts import SystemPrompt
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+logging.basicConfig(filename='debug.log', level=logging.DEBUG)
 
-def setup_session_state():
-    """Initialize session state variables."""
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "model_mgr" not in st.session_state:
-        st.session_state.model_mgr = ModelManager()
-
-def format_thinking_tag(content: str) -> str:
-    """Format thinking tags in the content"""
-    if "</think>" in content.lower():
-        # Extract content between think tags
-        start = content.lower().find("</think>")
-        return content[start + 8:]  # Remove the closing tag
-    return content
+def display_tool_details(tools):
+    """Display available tools and their details in the sidebar."""
+    st.sidebar.markdown("## Available Tools")
+    for tool in tools:
+        if tool['type'] == 'function':
+            func = tool['function']
+            with st.sidebar.expander(f"🔧 {func['name']}"):
+                st.markdown(f"**Description:**\n{func['description']}")
+                st.markdown("**Parameters:**")
+                for param, details in func['parameters']['properties'].items():
+                    st.markdown(f"- `{param}` ({details['type']})")
 
 def setup_sidebar():
-    """Configure the sidebar with model selection and options."""
-    model_mgr = st.session_state.model_mgr
-    
     with st.sidebar:
         st.markdown("# Chat Options")
         
-        # Get available models
-        available_models = model_mgr.get_available_models()
-        model_names = sorted(list(set(m["name"].split(":")[0] for m in available_models)))
+        # Add system prompt editor
+        render_system_prompt_editor()
         
-        # Model selection
-        selected_model = st.selectbox(
-            'Select Model',
-            model_names,
-            index=model_names.index(Config.DEFAULT_MODEL) if Config.DEFAULT_MODEL in model_names else 0
-        )
+        # Model selection and tool toggle
+        model = st.selectbox('Model:', config.OLLAMA_MODELS, 
+                           index=config.OLLAMA_MODELS.index(config.DEFAULT_MODEL))
+        use_tools = st.toggle('Use Tools', value=True)
         
-        # Model capabilities section
-        if selected_model:
-            model_details = model_mgr.get_model_details(selected_model)
+        # Display tool details if enabled
+        if use_tools:
+            tools = load_tools_from_functions()
+            display_tool_details(tools)
             
-            with st.expander("Model Information", expanded=True):
-                if model_details:
-                    capabilities = model_details.get("capabilities", {})
-                    st.markdown("### 🔧 Capabilities:")
-                    st.markdown(f"- Streaming: {'✅' if capabilities.get('streaming') else '❌'}")
-                    st.markdown(f"- Tools: {'✅' if capabilities.get('tool_support') else '❌'}")
-                    
-                    # Only show tool options if model supports it
-                    use_tools = False
-                    if capabilities.get("tool_support"):
-                        use_tools = st.toggle('Enable Tools', value=True)
-                        if use_tools and not mcp_manager.tools_enabled:
-                            st.warning("MCP tools not available. Check configuration.")
-                            use_tools = False
-                    else:
-                        st.info("This model doesn't support tools")
-                        
-                    # Temperature
-                    temperature = st.slider(
-                        "Temperature",
-                        min_value=0.0,
-                        max_value=2.0,
-                        value=0.7
-                    )
-                    
         if st.button('New Chat', key='new_chat', help='Start a new chat'):
             st.session_state.messages = []
             st.rerun()
             
-    return selected_model, use_tools
+    return model, use_tools
 
 def display_previous_messages():
-    """Display chat history."""
     for message in st.session_state.messages:
         display_role = message["role"]
-        content = message.get("content", "")
-        
-        if display_role == "assistant":
-            # Handle thinking tags
-            content = format_thinking_tag(content)
-            
-            if "tool_calls" in message:
-                # Display the message first
-                if content:
-                    with st.chat_message("assistant"):
-                        st.markdown(content)
-                
-                # Then display tool calls
-                for tool_call in message["tool_calls"]:
-                    function_name = tool_call["function"]["name"]
-                    function_args = tool_call["function"]["arguments"]
-                    if function_name.startswith("mcp_"):
-                        _, server, tool = function_name.split("_", 2)
-                        display_name = f"MCP Tool - {server}/{tool}"
-                    else:
-                        display_name = function_name
-                        
-                    with st.chat_message("tool"):
-                        st.markdown(f"**{display_name}:**")
-                        st.json(json.loads(function_args))
-            else:
-                # Regular message
-                with st.chat_message("assistant"):
+        if display_role == "assistant" and "tool_calls" in message:
+            for tool_call in message["tool_calls"]:
+                function_name = tool_call["function"]["name"]
+                function_args = tool_call["function"]["arguments"]
+                content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
+                with st.chat_message("tool"):
                     st.markdown(content)
-                    
-        elif display_role == "function":
-            with st.chat_message("tool"):
-                if message["name"].startswith("mcp_"):
-                    _, server, tool = message["name"].split("_", 2)
-                    st.markdown(f"**MCP Result - {server}/{tool}:**")
-                else:
-                    st.markdown("**Tool Result:**")
-                st.markdown(content)
         else:
             with st.chat_message(display_role):
-                st.markdown(content)
+                st.markdown(message["content"])
 
 def process_user_input():
-    """Get and process user input."""
     if user_prompt := st.chat_input("What would you like to ask?"):
         with st.chat_message("user"):
             st.markdown(user_prompt)
         st.session_state.messages.append({"role": "user", "content": user_prompt})
-        return True
-    return False
 
-def generate_response(model: str, use_tools: bool):
-    """Generate model response with tool support."""
+def load_tools_from_functions():
+    tools = []
+    available_functions = {
+        'brave': brave,
+        'filesystem': filesystem
+    }
+    
+    for name, func in available_functions.items():
+        sig = inspect.signature(func)
+        params = {}
+        
+        for param_name, param in sig.parameters.items():
+            param_type = 'string'  # default
+            if param.annotation == int:
+                param_type = 'integer'
+            elif param.annotation == list:
+                param_type = 'array'
+            elif param.annotation == dict:
+                param_type = 'object'
+                
+            params[param_name] = {
+                'type': param_type,
+                'description': '',  # Let the docstring explain the parameters
+            }
+            
+            # Add default value if one exists
+            if param.default != param.empty:
+                params[param_name]['default'] = param.default
+
+        tools.append({
+            'type': 'function',
+            'function': {
+                'name': name,
+                'description': func.__doc__,
+                'parameters': {
+                    'type': 'object',
+                    'properties': params
+                },
+                'is_async': asyncio.iscoroutinefunction(func)
+            }
+        })
+    return tools
+
+def generate_response(model, use_tools):
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
         with st.spinner('Generating response...'):
-            try:
-                # Get model capabilities
-                model_details = st.session_state.model_mgr.get_model_details(model)
-                if not model_details:
-                    st.error(f"Could not get model details for {model}")
-                    return
+            # Get current system prompt
+            system_prompt = SystemPrompt(
+                additional_instructions=st.session_state.get('additional_instructions')
+            ).get_full_prompt()
+            
+            # Add system prompt to messages
+            messages = [{"role": "system", "content": system_prompt}] + st.session_state.messages
+            
+            tools = load_tools_from_functions() if use_tools else []
+            response = chat(messages, model=model, tools=tools, stream=False)
+            
+            if "tool_calls" in response['message']:
+                assistant_message = response['message']
+                st.session_state.messages.append(assistant_message)
                 
-                capabilities = model_details.get("capabilities", {})
-                
-                # Use streaming if supported
-                stream = capabilities.get("streaming", True)
-                
-                # Only use tools if both model and MCP support them
-                enable_tools = use_tools and capabilities.get("tool_support", False)
-                
-                # Start chat with appropriate settings
-                llm_stream = chat(
-                    st.session_state.messages, 
-                    model=model, 
-                    tools=enable_tools, 
-                    stream=stream
-                )
-                
+                for tool_call in assistant_message['tool_calls']:
+                    function_name = tool_call["function"]["name"]
+                    function_args = tool_call["function"]["arguments"]
+                    
+                    # Debug logging
+                    logging.debug(f"Tool call detected: {function_name}")
+                    logging.debug(f"Arguments type: {type(function_args)}")
+                    logging.debug(f"Arguments content: {function_args}")
+                    
+                    with st.chat_message("tool"):
+                        content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
+                        st.markdown(content)
+                    
+                    available_functions = {
+                        'brave': {'func': brave, 'is_async': True},
+                        'filesystem': {'func': filesystem, 'is_async': True}
+                    }
+
+                    if function_name in available_functions:
+                        func_info = available_functions[function_name]
+                        try:
+                            # Parse arguments if they're a string
+                            args = function_args if isinstance(function_args, dict) else json.loads(function_args)
+                            
+                            logging.debug(f"Calling {function_name} with args: {args}")
+                            
+                            if func_info['is_async']:
+                                try:
+                                    function_response = asyncio.run(func_info['func'](**args))
+                                    if isinstance(function_response, dict) and 'error' in function_response:
+                                        raise Exception(function_response['error'])
+                                except Exception as e:
+                                    logging.error(f"Async function error: {str(e)}", exc_info=True)
+                                    raise
+                            else:
+                                function_response = func_info['func'](**args)
+                            
+                            logging.debug(f"Function response: {function_response}")
+                            
+                            tool_message = {
+                                'role': 'function',
+                                'name': function_name,
+                                'content': str(function_response)
+                            }
+                            st.session_state.messages.append(tool_message)
+                            with st.chat_message("tool"):
+                                st.markdown(tool_message['content'])
+                        except Exception as e:
+                            error_message = f"Error executing {function_name}: {str(e)}"
+                            logging.error(f"Error details - Args: {function_args}, Error: {str(e)}")
+                            st.error(error_message)
+                            logging.error(error_message)
+
+                # Stream the assistant's response
+                llm_stream = chat(messages, model=model, stream=True)
                 assistant_response = ""
-                tool_calls_detected = False
-                current_tool_calls = []
-                
-                # Display streamed response
                 with st.chat_message("assistant"):
                     stream_placeholder = st.empty()
-                    
                     for chunk in llm_stream:
-                        logger.debug(f"Raw chunk: {chunk}")
-                        
-                        if isinstance(chunk, dict):
-                            # Handle tool calls
-                            if "tool_calls" in chunk:
-                                tool_calls_detected = True
-                                current_tool_calls.extend(chunk["tool_calls"])
-                            
-                            # Handle message content
-                            content = chunk.get("content", "")
-                            if not content and "message" in chunk:
-                                content = chunk["message"].get("content", "")
-                                
-                            if content:
-                                # Format thinking tags
-                                content = format_thinking_tag(content)
-                                assistant_response += content
-                                stream_placeholder.markdown(assistant_response + "▌")
-                    
-                    # Final update without cursor
-                    if assistant_response:
-                        stream_placeholder.markdown(assistant_response)
-                    elif tool_calls_detected:
-                        stream_placeholder.markdown("Processing with tools...")
-                
-                # Add to chat history
-                if assistant_response or tool_calls_detected:
-                    message = {
-                        "role": "assistant",
-                        "content": assistant_response or "Processing with tools..."
-                    }
-                    if tool_calls_detected:
-                        message["tool_calls"] = current_tool_calls
-                    
-                    st.session_state.messages.append(message)
-                    
-                    # Process any tool calls
-                    if tool_calls_detected:
-                        for tool_call in current_tool_calls:
-                            function_name = tool_call["function"]["name"]
-                            function_args = tool_call["function"]["arguments"]
-                            
-                            # Execute tool
-                            if function_name.startswith("mcp_"):
-                                result = asyncio.run(mcp_manager.execute_tool(
-                                    function_name,
-                                    json.loads(function_args)
-                                ))
-                                # Add result to history
-                                st.session_state.messages.append({
-                                    "role": "function",
-                                    "name": function_name,
-                                    "content": result
-                                })
-                
-            except Exception as e:
-                logger.error(f"Error in generate_response: {str(e)}", exc_info=True)
-                st.error(f"Error generating response: {str(e)}")
+                        content = chunk['message']['content']
+                        assistant_response += content
+                        stream_placeholder.markdown(assistant_response + "▌")
+                    stream_placeholder.markdown(assistant_response)
+                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+            else:
+                # Handle responses without tool calls
+                llm_stream = chat(messages, model=model, stream=True)
+                assistant_response = ""
+                with st.chat_message("assistant"):
+                    stream_placeholder = st.empty()
+                    for chunk in llm_stream:
+                        content = chunk['message']['content']
+                        assistant_response += content
+                        stream_placeholder.markdown(assistant_response + "▌")
+                    stream_placeholder.markdown(assistant_response)
+                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
 
 def show_quick_start_buttons():
     """Display quick start buttons for tool discovery."""
@@ -244,33 +214,31 @@ def show_quick_start_buttons():
     
     col1, col2, col3 = st.columns(3)
     
+    # Only show buttons if no messages exist
     if not st.session_state.messages:
         with col1:
-            if st.button("🌐 Web Search"):
-                return "Let's search the web for information about AI models and their capabilities."
+            if st.button("🔍 Web Search"):
+                return "Can you help me search the web for some information?"
         with col2:
-            if st.button("📂 Explore Files"):
-                return "Can you help me explore and manage files in my current directory?"
+            if st.button("📂 File Operations"):
+                return "Can you help me explore and manage local files?"
         with col3:
-            if st.button("❔ Model Info"):
-                return "What are the capabilities and specifications of the currently selected model?"
+            if st.button("🛠️ Available Tools"):
+                return "What tools do you have access to and how can they help me?"
     return None
 
 def main():
     st.set_page_config(
-        page_title=Config.PAGE_TITLE,
+        page_title=config.PAGE_TITLE,
         initial_sidebar_state="expanded"
     )
-    
-    st.title(Config.PAGE_TITLE)
-    
-    # Initialize session state
-    setup_session_state()
-    
-    # Setup sidebar and get model settings
+    st.title(config.PAGE_TITLE)
     model, use_tools = setup_sidebar()
     
-    # Show quick start options
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    # Show quick start buttons and handle their actions
     quick_start_action = show_quick_start_buttons()
     if quick_start_action:
         st.session_state.messages.append({
@@ -279,12 +247,9 @@ def main():
         })
         st.rerun()
     
-    # Display chat history
     display_previous_messages()
-    
-    # Process new input and generate response
-    if process_user_input():
-        generate_response(model, use_tools)
+    process_user_input()
+    generate_response(model, use_tools)
 
 if __name__ == '__main__':
     main()
