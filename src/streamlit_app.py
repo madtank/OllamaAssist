@@ -212,20 +212,33 @@ def show_quick_start_buttons():
     st.markdown("### 🚀 Quick Start")
     st.markdown("Choose an action to begin:")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
     
     # Only show buttons if no messages exist
     if not st.session_state.messages:
         with col1:
-            if st.button("🔍 Web Search"):
-                return "Can you help me search the web for some information?"
+            if st.button("🔍 Deep Seek AI News"):
+                return "Can you help me search the web for projects integrating with Deep Seek AI, as well as other important news about it?"
         with col2:
-            if st.button("📂 File Operations"):
-                return "Can you help me explore and manage local files?"
+            if st.button("📂 List Files & Directories"):
+                return "Can you list the available directories and the files within them?"
         with col3:
             if st.button("🛠️ Available Tools"):
                 return "What tools do you have access to and how can they help me?"
+        with col4:
+            if st.button("📊 AI Trends & Innovations"):
+                return "What are the latest trends and innovations in AI?"
+        with col5:
+            if st.button("🌎 Global Tech News"):
+                return "Can you find the latest global technology news updates?"
+        with col6:
+            if st.button("💡 Startup Insights"):
+                return "What are some emerging AI startups and their innovations?"
+        with col7:
+            if st.button("🚀 Space & AI Exploration"):
+                return "How is AI being used in space exploration and research?"
     return None
+
 
 def main():
     st.set_page_config(

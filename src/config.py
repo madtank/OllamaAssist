@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 
 class Config:
     # Application settings
-    PAGE_TITLE = "Streamlit AI Chatbot with Ollama Integration"
-    DEFAULT_MODEL = "MFDoom/deepseek-r1-tool-calling:14b"
+    PAGE_TITLE = "Streamlit+Ollama+MCP"
+    DEFAULT_MODEL = "llama3.2:latest"
 
     def __init__(self):
         # Load environment variables
