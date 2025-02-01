@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 import json
 import logging
 
@@ -7,9 +6,9 @@ import streamlit as st
 
 from src.config import config
 from src.llm_helper import chat
-from src.tools import brave, filesystem
 from src.ui import render_system_prompt_editor
 from src.prompts import SystemPrompt
+from src.tools.registry import ToolRegistry
 
 # Configure logging
 logging.basicConfig(filename='debug.log', level=logging.DEBUG)
@@ -33,81 +32,67 @@ def setup_sidebar():
         # Add system prompt editor
         render_system_prompt_editor()
         
-        # Model selection and tool toggle
+        # Model selection
         model = st.selectbox('Model:', config.OLLAMA_MODELS, 
                            index=config.OLLAMA_MODELS.index(config.DEFAULT_MODEL))
-        use_tools = st.toggle('Use Tools', value=True)
         
-        # Display tool details if enabled
-        if use_tools:
-            tools = load_tools_from_functions()
-            display_tool_details(tools)
+        # Display tool details
+        tools = load_tools_from_functions()
+        display_tool_details(tools)
             
         if st.button('New Chat', key='new_chat', help='Start a new chat'):
             st.session_state.messages = []
             st.rerun()
             
-    return model, use_tools
+    return model
 
 def display_previous_messages():
-    for message in st.session_state.messages:
-        display_role = message["role"]
-        if display_role == "assistant" and "tool_calls" in message:
-            for tool_call in message["tool_calls"]:
-                function_name = tool_call["function"]["name"]
-                function_args = tool_call["function"]["arguments"]
-                content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
-                with st.chat_message("tool"):
-                    st.markdown(content)
-        else:
-            with st.chat_message(display_role):
-                st.markdown(message["content"])
+    # Create a container for messages
+    with st.container():
+        for message in st.session_state.messages:
+            display_role = message["role"]
+            if display_role == "assistant" and "tool_calls" in message:
+                for tool_call in message["tool_calls"]:
+                    function_name = tool_call["function"]["name"]
+                    function_args = tool_call["function"]["arguments"]
+                    content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
+                    with st.chat_message("tool"):
+                        st.markdown(content)
+            else:
+                with st.chat_message(display_role):
+                    st.markdown(message["content"])
 
 def process_user_input():
-    if user_prompt := st.chat_input("What would you like to ask?"):
+    # Create empty element to maintain spacing
+    st.empty()
+    
+    # Put input outside any container to maintain bottom positioning
+    user_prompt = st.chat_input("What would you like to ask?")
+    
+    # Place toggle in a floating element above the chat input
+    use_tools = st.toggle('🔧', value=True, help="Enable/Disable Tools", key="tools_toggle")
+    
+    if user_prompt:
         with st.chat_message("user"):
             st.markdown(user_prompt)
         st.session_state.messages.append({"role": "user", "content": user_prompt})
+    
+    return use_tools
 
 def load_tools_from_functions():
+    """Load tools from the registry for LLM usage"""
     tools = []
-    available_functions = {
-        'brave': brave,
-        'filesystem': filesystem
-    }
-    
-    for name, func in available_functions.items():
-        sig = inspect.signature(func)
-        params = {}
-        
-        for param_name, param in sig.parameters.items():
-            param_type = 'string'  # default
-            if param.annotation == int:
-                param_type = 'integer'
-            elif param.annotation == list:
-                param_type = 'array'
-            elif param.annotation == dict:
-                param_type = 'object'
-                
-            params[param_name] = {
-                'type': param_type,
-                'description': '',  # Let the docstring explain the parameters
-            }
-            
-            # Add default value if one exists
-            if param.default != param.empty:
-                params[param_name]['default'] = param.default
-
+    for name, tool in ToolRegistry.get_all_tools().items():
         tools.append({
             'type': 'function',
             'function': {
                 'name': name,
-                'description': func.__doc__,
+                'description': tool.description,
                 'parameters': {
                     'type': 'object',
-                    'properties': params
+                    'properties': tool.parameters
                 },
-                'is_async': asyncio.iscoroutinefunction(func)
+                'is_async': True
             }
         })
     return tools
@@ -143,29 +128,11 @@ def generate_response(model, use_tools):
                         content = f"**Function Call ({function_name}):**\n```json\n{json.dumps(function_args, indent=2)}\n```"
                         st.markdown(content)
                     
-                    available_functions = {
-                        'brave': {'func': brave, 'is_async': True},
-                        'filesystem': {'func': filesystem, 'is_async': True}
-                    }
-
-                    if function_name in available_functions:
-                        func_info = available_functions[function_name]
+                    if function_name in ToolRegistry.get_all_tools():
+                        tool = ToolRegistry.get_tool(function_name)
                         try:
-                            # Parse arguments if they're a string
                             args = function_args if isinstance(function_args, dict) else json.loads(function_args)
-                            
-                            logging.debug(f"Calling {function_name} with args: {args}")
-                            
-                            if func_info['is_async']:
-                                try:
-                                    function_response = asyncio.run(func_info['func'](**args))
-                                    if isinstance(function_response, dict) and 'error' in function_response:
-                                        raise Exception(function_response['error'])
-                                except Exception as e:
-                                    logging.error(f"Async function error: {str(e)}", exc_info=True)
-                                    raise
-                            else:
-                                function_response = func_info['func'](**args)
+                            function_response = asyncio.run(tool.execute(**args))
                             
                             logging.debug(f"Function response: {function_response}")
                             
@@ -239,12 +206,14 @@ def main():
         initial_sidebar_state="expanded"
     )
     st.title(config.PAGE_TITLE)
-    model, use_tools = setup_sidebar()
     
     if "messages" not in st.session_state:
         st.session_state.messages = []
     
-    # Show quick start buttons and handle their actions
+    # Get model before message display
+    model = setup_sidebar()
+    
+    # Show quick start buttons at top
     quick_start_action = show_quick_start_buttons()
     if quick_start_action:
         st.session_state.messages.append({
@@ -253,8 +222,14 @@ def main():
         })
         st.rerun()
     
-    display_previous_messages()
-    process_user_input()
+    # Create a container for messages
+    with st.container():
+        display_previous_messages()
+    
+    # Input and tools toggle will be at bottom
+    use_tools = process_user_input()
+    
+    # Handle response generation
     generate_response(model, use_tools)
 
 if __name__ == '__main__':
