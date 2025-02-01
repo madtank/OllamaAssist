@@ -1,10 +1,15 @@
 import os
 import json
+import ollama
 from pathlib import Path
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
 class Config:
+    # Application settings
+    PAGE_TITLE = "Streamlit AI Chatbot with Ollama Integration"
+    DEFAULT_MODEL = "MFDoom/deepseek-r1-tool-calling:14b"
+
     def __init__(self):
         # Load environment variables
         load_dotenv()
@@ -16,9 +21,24 @@ class Config:
         # Load MCP config
         self.mcp_config = self._load_mcp_config()
         
+        # Initialize Ollama models
+        self._init_ollama_models()
+        
         # Apply environment overrides
         self._apply_env_overrides()
-    
+
+    def _init_ollama_models(self):
+        """Initialize available Ollama models"""
+        try:
+            models_info = ollama.list()
+            self.OLLAMA_MODELS = tuple(model['model'] for model in models_info['models'])
+            
+            # Validate default model
+            if self.DEFAULT_MODEL not in self.OLLAMA_MODELS and self.OLLAMA_MODELS:
+                self.DEFAULT_MODEL = self.OLLAMA_MODELS[0]
+        except Exception as e:
+            self.OLLAMA_MODELS = (self.DEFAULT_MODEL,)
+            
     def _load_mcp_config(self) -> Dict[str, Any]:
         """Load MCP server configuration from JSON"""
         if not self.config_file.exists():
